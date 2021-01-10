@@ -1,5 +1,6 @@
 /build
 /vendor
 
+/composer.lock
 /nodes.yml
 /deploy-ext.inc.php
