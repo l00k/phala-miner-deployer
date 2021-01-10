@@ -4,11 +4,6 @@ namespace Deployer;
 
 require 'recipe/common.php';
 
-$deployExtPath = __DIR__ . '/deploy-ext.inc.php';
-if (file_exists($deployExtPath)) {
-    require($deployExtPath);
-}
-
 // general deployer configuration
 set('application', 'phala-miner-deployer');
 set('repository', 'git@github.com:l00k/phala-miner-deployer.git');
@@ -19,6 +14,12 @@ set('allow_anonymous_stats', false);
 set('service_name', 'phala-stack');
 set('join_lan_cmd', '');
 inventory('nodes.yml');
+
+
+$deployExtPath = __DIR__ . '/deploy-ext.inc.php';
+if (file_exists($deployExtPath)) {
+    require($deployExtPath);
+}
 
 
 desc('Install old docker (if necessary)');
