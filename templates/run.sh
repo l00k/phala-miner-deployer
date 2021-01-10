@@ -28,8 +28,8 @@ DONE=0
 
 for NODE_IP in "${NODES[@]}"; do
     echo "Checking $NODE_IP"
-    STATUS=`echo 'exit' | telnet $NODE_IP 9944 | grep "Connection refused"`
-    if [[ $STATUS != '' ]]; then
+    STATUS=`echo 'exit' | telnet $NODE_IP 9944 | grep "Connected to"`
+    if [[ $STATUS == '' ]]; then
         echo "Down!"
         continue
     fi
