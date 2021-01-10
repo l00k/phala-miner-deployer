@@ -12,7 +12,7 @@ Root account access to device is required! (optionally account with `sudo` allow
 **NOTE!**  
 You are using this scripts for your own risk!  
 If you don't know what are you doing - stop.  
-Running someone else scripts with root privilege, even with checking source (which I strongly suggest you to do) may leed you to data / funds / device lost.
+Running someone else scripts with root privilege, even with checking source (which I strongly suggest you to do) may lead you to data / funds / device lost.
 
 Entire process based on:  
 https://wiki.phala.network/en-us/docs/poc3/
