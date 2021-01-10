@@ -199,7 +199,7 @@ task('phala:stack:deploy', function () {
         $nodes[] = $host->getRealHostname();
     }
 
-    $nodeIpsRaw = '"' . join('", "', $nodes) . '"';
+    $nodeIpsRaw = '"' . join('" "', $nodes) . '"';
     set('node_ips', $nodeIpsRaw);
 
     // get device
@@ -268,17 +268,3 @@ task('phala:stack:deploy', function () {
 
     run('update-rc.d {{service_name}} defaults');
 });
-
-
-desc('Deploy stack');
-task('removeold', function () {
-    run('rm /etc/systemd/system/phala-miner.service');
-    run('docker container stop $(docker container ls -aq)');
-
-    run('mv /root/phala-node-data /root/phala/phala-node-data');
-    run('mv /root/phala-pruntime-data /root/phala/phala-pruntime-data');
-
-    run('rm /root/phala/.env');
-    run('rm /root/phala/service');
-});
-
