@@ -10,6 +10,9 @@ sudo docker run -dit --rm \
     -v {{deploy_path}}/phala-node-data:/root/data \
     phalanetwork/phala-poc3-node
 
+# wait for whole system resources to boot up
+sleep 60
+
 # start runtime
 sudo docker run -dit --rm \
     --name phala-pruntime \
