@@ -47,11 +47,6 @@ task('phala:sgx_enable', function () {
         sudo ./sgx_enable;
         rm sgx_enable;
     ', [ 'tty' => true ]);
-
-    $isConfirmed = askConfirmation('Before performing next task you need to reboot device. Reboot now?');
-    if ($isConfirmed) {
-        run('sudo reboot');
-    }
 });
 
 desc('Check SGX driver');
