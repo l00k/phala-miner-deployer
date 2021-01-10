@@ -1,0 +1,13 @@
+{
+    "name": "l00k/phala-miner-deployer",
+    "type": "project",
+    "require": {
+        "deployer/deployer": "^6.8"
+    },
+    "authors": [
+        {
+            "name": "l00k",
+            "email": "crypto@100k.dev"
+        }
+    ]
+}

@@ -1,0 +1,8 @@
+my-nice-miner:
+    hostname: 123.45.67.89
+    port: 22
+    user: root
+    roles: [ 'miner' ]
+    deploy_path: '/root/phala'
+    node_name: 'my-nice-miner'
+    miner_mnemonic: 'secret words here secret words here secret words here secret words here'
