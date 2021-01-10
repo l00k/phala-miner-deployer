@@ -19,6 +19,8 @@ https://wiki.phala.network/en-us/docs/poc3/
 
 Feel free to contact me on phala discord @l00k
 
+PS. Also worth noting - `run.sh` script selects node instance based on current machine state. So if one of your devices boots up (may have node out of sync) scripts telnet's each node to find one running. Next `phala-phost` is executed with working node ;)
+
 ## Requirements
 
 - PHP >= 7.2
