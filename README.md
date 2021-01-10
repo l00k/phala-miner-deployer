@@ -17,6 +17,8 @@ Running someone else scripts with root privilege, even with checking source (whi
 Entire process based on:  
 https://wiki.phala.network/en-us/docs/poc3/
 
+Feel free to contact me on phala discord @l00k
+
 ## Requirements
 
 - PHP >= 7.2
