@@ -12,34 +12,23 @@
 SUBSYSFILE=/var/lock/subsys/{{service_name}}
 LOGFILE=/var/log/{{service_name}}.log
 
-start() {
-    DATE=`date +"%Y-%m-%d"`
-    echo "$DATE starting service" >> $LOGFILE
-
-    {{deploy_path}}/run.sh &
-    touch $SUBSYSFILE
-}
-
-stop() {
-    DATE=`date +"%Y-%m-%d"`
-    echo "$DATE stopping service" >> $LOGFILE
-
-    {{deploy_path}}/stop.sh
-}
-
 case "$1" in
     start)
-        start
+        {{deploy_path}}/main.sh start stack &
+
+        touch $SUBSYSFILE
+
+        DATE=`date +"%Y-%m-%d"`
+        echo "$DATE starting service" >> $LOGFILE
         ;;
     stop)
-        stop
-        ;;
-    restart)
-        stop
-        start
+        {{deploy_path}}/main.sh stop stack
+
+        DATE=`date +"%Y-%m-%d"`
+        echo "$DATE stopping service" >> $LOGFILE
         ;;
     *)
-        echo "Usage: $0 {start|stop|restart}"
+        echo "Usage: $0 {start|stop}"
 esac
 
 

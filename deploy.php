@@ -191,7 +191,7 @@ task('phala:check_compatibility', function () {
 
 desc('Deploy stack');
 task('phala:stack:deploy', function () {
-    $scripts = ['rc-script.sh', 'run.sh', 'stop.sh'];
+    $scripts = ['rc-script.sh', 'main.sh'];
 
     // collect all nodes ips
     $nodes = [];
@@ -220,7 +220,7 @@ task('phala:stack:deploy', function () {
     // step 1 - clear directories
     writeln('<comment>Clearing build directory (local)</comment>');
 
-    if (test('[[ -e ./build ]]')) {
+    if (testLocally('[[ -e ./build ]]')) {
         runLocally('rm -r ./build');
     }
     runLocally('mkdir -p ./build/{{node_name}}');
