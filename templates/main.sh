@@ -48,16 +48,46 @@ restart_runtime() {
 }
 
 start_host() {
-    NODE_IP=$1
-    sudo docker run -d -ti --rm \
-        --name phala-phost \
-        -e PRUNTIME_ENDPOINT="http://phala-pruntime:8000" \
-        -e PHALA_NODE_WS_ENDPOINT="ws://$NODE_IP:9944" \
-        -e MNEMONIC="{{miner_mnemonic}}" \
-        -e EXTRA_OPTS="-r" \
-        --link phala-node \
-        --link phala-pruntime \
-        phalanetwork/phala-poc3-phost
+    NODES=({{node_ips}})
+    NODES+=("phala-node")
+    DONE=0
+
+    for NODE_IP in "${NODES[@]}"; do
+        echo "Checking $NODE_IP"
+        STATUS=$(echo 'exit' | telnet $NODE_IP 9944 | grep "Connected to")
+        if [[ $STATUS == '' ]]; then
+            echo "Down!"
+            continue
+        fi
+
+        for TRY in {1..2}; do
+            echo "Connecting to $NODE_IP"
+
+            # start host
+            sudo docker run -d -ti --rm \
+                --name phala-phost \
+                -e PRUNTIME_ENDPOINT="http://phala-pruntime:8000" \
+                -e PHALA_NODE_WS_ENDPOINT="ws://$NODE_IP:9944" \
+                -e MNEMONIC="{{miner_mnemonic}}" \
+                -e EXTRA_OPTS="-r" \
+                --link phala-node \
+                --link phala-pruntime \
+                phalanetwork/phala-poc3-phost
+
+            sleep 15
+
+            STATUS=$(sudo docker ps | grep "phala-phost")
+            if [[ $STATUS != '' ]]; then
+                echo "It works"
+                DONE=1
+                break
+            fi
+        done
+
+        if [[ $DONE == 1 ]]; then
+            break
+        fi
+    done
 }
 
 stop_host() {
@@ -85,38 +115,7 @@ start_stack() {
     {{join_lan_cmd}}
 
     # select node from all
-    NODES=({{node_ips}})
-    NODES+=("phala-node")
-    DONE=0
-
-    for NODE_IP in "${NODES[@]}"; do
-        echo "Checking $NODE_IP"
-        STATUS=$(echo 'exit' | telnet $NODE_IP 9944 | grep "Connected to")
-        if [[ $STATUS == '' ]]; then
-            echo "Down!"
-            continue
-        fi
-
-        for TRY in {1..2}; do
-            echo "Connecting to $NODE_IP"
-
-            # start host
-            start_host $NODE_IP
-
-            sleep 15
-
-            STATUS=$(sudo docker ps | grep "phala-phost")
-            if [[ $STATUS != '' ]]; then
-                echo "It works"
-                DONE=1
-                break
-            fi
-        done
-
-        if [[ $DONE == 1 ]]; then
-            break
-        fi
-    done
+    start_host
 }
 
 stop_stack() {
