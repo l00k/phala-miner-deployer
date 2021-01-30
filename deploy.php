@@ -82,7 +82,8 @@ task('phala:driver:install', function () {
 
     // prepare to install
     $dkmsInstalled = test('[[ `which dkms` == "" ]]');
-    if (!$dkmsInstalled) {
+    if ($dkmsInstalled) {
+        writeln('Installing dkms');
         run('sudo apt-get install dkms');
     }
 
@@ -96,11 +97,12 @@ task('phala:driver:install', function () {
         rm sgx_linux_x64_driver_1.36.2.bin;
     ');
     $isInstalled = test('[[ -e /dev/sgx ]]');
+    $uninstallExists = test('[[ -e /opt/intel/sgxdriver/uninstall.sh ]]');
     if ($isInstalled) {
         writeln('<info>DCAP driver successfully installed!</info>');
         return;
     }
-    else {
+    elseif ($uninstallExists) {
         writeln('DCAP driver doesn\'t work. Uninstalling...');
         run('sudo /opt/intel/sgxdriver/uninstall.sh');
     }
@@ -115,11 +117,12 @@ task('phala:driver:install', function () {
         rm sgx_linux_x64_driver_2.11.0_4505f07.bin;
     ');
     $isInstalled = test('[[ -e /dev/isgx ]]');
+    $uninstallExists = test('[[ -e /opt/intel/sgxdriver/uninstall.sh ]]');
     if ($isInstalled) {
         writeln('<info>SGX driver successfully installed!</info>');
         return;
     }
-    else {
+    elseif ($uninstallExists) {
         writeln('SGX driver doesn\'t work. Uninstalling...');
         run('sudo /opt/intel/sgxdriver/uninstall.sh');
     }
