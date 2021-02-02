@@ -48,8 +48,7 @@ restart_runtime() {
 }
 
 start_host() {
-    NODES=({{node_ips}})
-    NODES+=("phala-node")
+    NODES=("phala-node")
     DONE=0
 
     for NODE_IP in "${NODES[@]}"; do
