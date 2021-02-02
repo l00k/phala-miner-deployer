@@ -2,6 +2,8 @@
 
 namespace Deployer;
 
+use Deployer\Task\Context;
+
 require 'recipe/common.php';
 
 // general deployer configuration
@@ -194,12 +196,28 @@ task('phala:check_compatibility', function () {
 
 desc('Deploy stack');
 task('phala:stack:deploy', function () {
-    $scripts = ['rc-script.sh', 'main.sh'];
+    $target = Context::get()->getHost();
+
+    $hostname = $target->getHostname();
+    writeln("<info>Deploying to ${hostname}</info>");
+
+    $withNode = (bool) $target->get('use_as_node', false);
+    if ($withNode) {
+        writeln("<comment>Deploying to ${hostname}</comment>");
+    }
+
+    $scripts = [
+        'rc-script.sh' => 'rc-script.sh',
+        'main.sh' => $withNode ? 'main-with-node.sh' : 'main-without-node.sh'
+    ];
 
     // collect all nodes ips
     $nodes = [];
     foreach (Deployer::get()->hosts as $host) {
-        $nodes[] = $host->getRealHostname();
+        $useAsNode = (bool) $host->get('use_as_node');
+        if ($useAsNode) {
+            $nodes[] = $host->getRealHostname();
+        }
     }
 
     $nodeIpsRaw = '"' . join('" "', $nodes) . '"';
@@ -231,11 +249,11 @@ task('phala:stack:deploy', function () {
     // step 2 - generate scripts
     writeln('<comment>Genereting scripts (local)</comment>');
 
-    foreach ($scripts as $script) {
-        writeln($script);
+    foreach ($scripts as $scriptDest => $scriptSrc) {
+        writeln($scriptSrc);
 
-        $templatePath = __DIR__ . '/templates/' . $script;
-        $scriptPath = __DIR__ . '/build/'. parse('{{node_name}}') .'/' . $script;
+        $templatePath = __DIR__ . '/templates/' . $scriptSrc;
+        $scriptPath = __DIR__ . '/build/'. parse('{{node_name}}') .'/' . $scriptSrc;
 
         $templateContent = file_get_contents($templatePath);
         $scriptContent = parse($templateContent);
@@ -251,11 +269,11 @@ task('phala:stack:deploy', function () {
         run('sudo mkdir -p {{deploy_path}}');
     }
 
-    foreach ($scripts as $script) {
-        writeln($script);
+    foreach ($scripts as $scriptDest => $scriptSrc) {
+        writeln($scriptDest);
 
-        $localPath = __DIR__ . '/build/'. parse('{{node_name}}') .'/' . $script;
-        $remotePath = '{{deploy_path}}/' . $script;
+        $localPath = __DIR__ . '/build/'. parse('{{node_name}}') .'/' . $scriptSrc;
+        $remotePath = '{{deploy_path}}/' . $scriptDest;
 
         upload($localPath, $remotePath);
         run("sudo chmod +x $remotePath");

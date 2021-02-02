@@ -74,6 +74,7 @@ my-nice-miner:
     user: root
     stage: 'miner'
     deploy_path: '/root/phala'
+    use_as_node: true
     node_name: 'my-nice-miner'
     miner_mnemonic: 'secret words here secret words here secret words here secret words here'
 <other node internal name>:
@@ -84,6 +85,7 @@ my-nice-miner:
 `<node>.port` - self explanatory  
 `<node>.user` - root or other user which has access to `sudo` command (without password - google "visudo nopasswd")  
 `<node>.deploy_path` - directory where all scripts and node data will be placed  
+`<node>.use_as_node` - true / false  
 `<node>.node_name` - place name which will be used publically by Phala network to identify your node  
 `<node>.miner_mnemonic` - your controller account mnemonic
 
