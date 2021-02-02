@@ -244,7 +244,7 @@ task('phala:stack:deploy', function () {
     if (testLocally('[[ -e ./build ]]')) {
         runLocally('rm -r ./build');
     }
-    runLocally('mkdir -p ./build/{{node_name}}');
+    runLocally('mkdir -p ./build/{{target}}');
 
     // step 2 - generate scripts
     writeln('<comment>Genereting scripts (local)</comment>');
@@ -253,7 +253,7 @@ task('phala:stack:deploy', function () {
         writeln($scriptSrc);
 
         $templatePath = __DIR__ . '/templates/' . $scriptSrc;
-        $scriptPath = __DIR__ . '/build/'. parse('{{node_name}}') .'/' . $scriptSrc;
+        $scriptPath = __DIR__ . '/build/'. parse('{{target}}') .'/' . $scriptSrc;
 
         $templateContent = file_get_contents($templatePath);
         $scriptContent = parse($templateContent);
@@ -272,7 +272,7 @@ task('phala:stack:deploy', function () {
     foreach ($scripts as $scriptDest => $scriptSrc) {
         writeln($scriptDest);
 
-        $localPath = __DIR__ . '/build/'. parse('{{node_name}}') .'/' . $scriptSrc;
+        $localPath = __DIR__ . '/build/'. parse('{{target}}') .'/' . $scriptSrc;
         $remotePath = '{{deploy_path}}/' . $scriptDest;
 
         upload($localPath, $remotePath);
@@ -287,5 +287,6 @@ task('phala:stack:deploy', function () {
         run("sudo ln -s {{deploy_path}}/rc-script.sh /etc/init.d/{{service_name}}");
     }
 
+    run('update-rc.d -f {{service_name}} remove');
     run('update-rc.d {{service_name}} defaults');
 });
