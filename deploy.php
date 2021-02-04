@@ -86,7 +86,7 @@ task('phala:driver:install', function () {
     $dkmsInstalled = test('[[ `which dkms` == "" ]]');
     if ($dkmsInstalled) {
         writeln('Installing dkms');
-        run('sudo apt-get install dkms');
+        run('sudo apt-get install -y dkms');
     }
 
     // first - try install DCAP
