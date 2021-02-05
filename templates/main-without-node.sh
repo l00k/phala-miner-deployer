@@ -53,7 +53,7 @@ start_host() {
                 --link phala-pruntime \
                 phalanetwork/phala-poc3-phost
 
-            sleep 15
+            sleep 10
 
             STATUS=$(sudo docker ps | grep "phala-phost")
             if [[ $STATUS != '' ]]; then
@@ -80,7 +80,7 @@ start_stack() {
 
     start_host
 
-    start_watch
+#     start_watch
 }
 
 stop_stack() {
@@ -88,24 +88,24 @@ stop_stack() {
     stop_runtime
 }
 
-start_watch() {
-    STATUS=$(sudo docker ps | grep "phala-pruntime")
-    if [[ $STATUS == '' ]]; then
-        start_runtime
-        sleep 1
-    fi
-
-    STATUS=$(sudo docker ps | grep "phala-phost")
-    if [[ $STATUS == '' ]]; then
-        start_host
-        sleep 1
-    fi
-
-    # wait and repeat
-    sleep 60
-
-    start_watch
-}
+# start_watch() {
+#     STATUS=$(sudo docker ps | grep "phala-pruntime")
+#     if [[ $STATUS == '' ]]; then
+#         start_runtime
+#         sleep 1
+#     fi
+#
+#     STATUS=$(sudo docker ps | grep "phala-phost")
+#     if [[ $STATUS == '' ]]; then
+#         start_host
+#         sleep 1
+#     fi
+#
+#     # wait and repeat
+#     sleep 60
+#
+#     start_watch
+# }
 
 
 # RUN

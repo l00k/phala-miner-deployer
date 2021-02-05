@@ -198,12 +198,11 @@ task('phala:stack:deploy', function () {
     $target = Context::get()->getHost();
 
     $hostname = $target->getHostname();
-    writeln("<info>Deploying to ${hostname}</info>");
+    $withNode = $target->get('use_as_node', false)
+        ? 'with node'
+        : 'without node';
 
-    $withNode = (bool) $target->get('use_as_node', false);
-    if ($withNode) {
-        writeln("<comment>Deploying to ${hostname}</comment>");
-    }
+    writeln("<info>Deploying to ${hostname} (${withNode})</info>");
 
     $scripts = [
         'rc-script.sh' => 'rc-script.sh',

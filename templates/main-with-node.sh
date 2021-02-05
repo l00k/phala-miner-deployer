@@ -48,16 +48,27 @@ restart_runtime() {
 }
 
 start_host() {
-    # start host
-    sudo docker run -d -ti --rm \
-        --name phala-phost \
-        -e PRUNTIME_ENDPOINT="http://phala-pruntime:8000" \
-        -e PHALA_NODE_WS_ENDPOINT="ws://phala-node:9944" \
-        -e MNEMONIC="{{miner_mnemonic}}" \
-        -e EXTRA_OPTS="-r" \
-        --link phala-node \
-        --link phala-pruntime \
-        phalanetwork/phala-poc3-phost
+    for TRY in {1..3}; do
+        # start host
+        sudo docker run -d -ti --rm \
+            --name phala-phost \
+            -e PRUNTIME_ENDPOINT="http://phala-pruntime:8000" \
+            -e PHALA_NODE_WS_ENDPOINT="ws://phala-node:9944" \
+            -e MNEMONIC="{{miner_mnemonic}}" \
+            -e EXTRA_OPTS="-r" \
+            --link phala-node \
+            --link phala-pruntime \
+            phalanetwork/phala-poc3-phost
+
+        sleep 10
+
+        STATUS=$(sudo docker ps | grep "phala-phost")
+        if [[ $STATUS != '' ]]; then
+            echo "It works"
+            DONE=1
+            break
+        fi
+    done
 }
 
 stop_host() {
@@ -78,7 +89,7 @@ start_stack() {
 
     start_host
 
-    start_watch
+#     start_watch
 }
 
 stop_stack() {
@@ -87,30 +98,30 @@ stop_stack() {
     stop_node
 }
 
-start_watch() {
-    STATUS=$(sudo docker ps | grep "phala-node")
-    if [[ $STATUS == '' ]]; then
-        start_node
-        sleep 1
-    fi
-
-    STATUS=$(sudo docker ps | grep "phala-pruntime")
-    if [[ $STATUS == '' ]]; then
-        start_runtime
-        sleep 1
-    fi
-
-    STATUS=$(sudo docker ps | grep "phala-phost")
-    if [[ $STATUS == '' ]]; then
-        start_host
-        sleep 1
-    fi
-
-    # wait and repeat
-    sleep 60
-
-    start_watch
-}
+# start_watch() {
+#     STATUS=$(sudo docker ps | grep "phala-node")
+#     if [[ $STATUS == '' ]]; then
+#         start_node
+#         sleep 1
+#     fi
+#
+#     STATUS=$(sudo docker ps | grep "phala-pruntime")
+#     if [[ $STATUS == '' ]]; then
+#         start_runtime
+#         sleep 1
+#     fi
+#
+#     STATUS=$(sudo docker ps | grep "phala-phost")
+#     if [[ $STATUS == '' ]]; then
+#         start_host
+#         sleep 1
+#     fi
+#
+#     # wait and repeat
+#     sleep 60
+#
+#     start_watch
+# }
 
 
 # RUN
