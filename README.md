@@ -91,12 +91,11 @@ my-nice-miner:
 
 ### Extra parameters (deploy-ext.inc.php)
 In this file you can place extra parameters definition
-For example global definition for `deploy_path` or `join_lan_cmd`
+For example global definition for `deploy_path`
 ```
 <?php
 namespace Deployer;
 set('deploy_path', '/root/phala');
-set('join_lan_cmd', 'zerotier-cli join <lan id>');
 ```
 
 

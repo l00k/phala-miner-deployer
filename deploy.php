@@ -14,7 +14,6 @@ set('allow_anonymous_stats', false);
 
 // project configuration
 set('service_name', 'phala-stack');
-set('join_lan_cmd', '');
 inventory('nodes.yml');
 
 
@@ -276,6 +275,7 @@ task('phala:stack:deploy', function () {
         $remotePath = '{{deploy_path}}/' . $scriptDest;
 
         upload($localPath, $remotePath);
+        run("sudo chown root:root $remotePath");
         run("sudo chmod +x $remotePath");
     }
 

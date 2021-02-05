@@ -74,19 +74,12 @@ stop_host() {
 }
 
 start_stack() {
-    # wait for whole system resources to boot up
     sleep $DELAY
 
-    # start runtime
     start_runtime
 
-    # join VPN
-    {{join_lan_cmd}}
-
-    # select node from all
     start_host
 
-    # start watch
     start_watch
 }
 
@@ -96,12 +89,6 @@ stop_stack() {
 }
 
 start_watch() {
-    STATUS=$(sudo docker ps | grep "phala-node")
-    if [[ $STATUS == '' ]]; then
-        start_node
-        sleep 1
-    fi
-
     STATUS=$(sudo docker ps | grep "phala-pruntime")
     if [[ $STATUS == '' ]]; then
         start_runtime

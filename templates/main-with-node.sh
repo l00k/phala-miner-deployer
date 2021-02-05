@@ -65,7 +65,6 @@ stop_host() {
 }
 
 start_stack() {
-    # start node and verify
     start_node
 
     sleep 5
@@ -75,16 +74,10 @@ start_stack() {
         restart_node
     fi
 
-    # start runtime
     start_runtime
 
-    # join VPN
-    {{join_lan_cmd}}
-
-    # select node from all
     start_host
 
-    # start watch
     start_watch
 }
 
