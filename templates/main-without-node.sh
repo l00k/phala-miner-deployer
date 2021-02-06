@@ -22,7 +22,8 @@ start_runtime() {
         {{pruntime_devices}} \
         phalanetwork/phala-poc3-pruntime
 
-    sleep 5
+    # wait for pruntime init
+    sleep 10
 }
 
 stop_runtime() {
