@@ -317,15 +317,8 @@ task('phala:stack:stats', function () {
     writeln("<info>Fetching ${hostname} stats</info>");
 
     // prepare to php
-    $dkmsInstalled = test('[[ `which php` == "" ]]');
-    if ($dkmsInstalled) {
-        writeln('Installing PHP');
-        run('sudo apt-get install -y php');
-    }
-
-    // prepare sensors
-    $dkmsInstalled = test('[[ `which sensors` == "" ]]');
-    if ($dkmsInstalled) {
+    $phpInstalled = test('[[ `which php` == "" ]]');
+    if ($phpInstalled) {
         writeln('Installing PHP');
         run('sudo apt-get install -y php');
     }
