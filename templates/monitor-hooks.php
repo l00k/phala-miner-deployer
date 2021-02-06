@@ -84,10 +84,10 @@ function checkRuntime() {
     // check container
     $status = checkDockerContainer('phala-pruntime');
     if ($status === 0) {
-        displayComment('Container is runnning', 1);
+        displayComment('Container is running', 1);
     }
     else {
-        displayError('Container is not runnning', 1);
+        displayError('Container is not running', 1);
         return;
     }
 
@@ -119,10 +119,10 @@ function checkHost() {
     // check container
     $status = checkDockerContainer('phala-phost');
     if ($status === 0) {
-        displayInfo('Container is runnning', 1);
+        displayInfo('Container is running', 1);
     }
     else {
-        displayError('Container is not runnning', 1);
+        displayError('Container is not running', 1);
     }
 }
 
