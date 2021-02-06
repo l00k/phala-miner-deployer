@@ -170,20 +170,6 @@ function checkSystem() {
     foreach ($temperatures as $device => $temp) {
         displayLog("$device\t${temp}°C", 1);
     }
-
-//    for dir in '*/'
-//    do
-//    	name=`cat ${dir}/name`
-//
-//    	if [[ $name == "coretemp" ]]; then
-//            name="cpu"
-//    	fi
-//
-//        rawTemp=$(cat $dir/temp1_input)
-//    	devices[$name]=$(($rawTemp / 1000))
-//
-//    	display_comment "\t$name\t${devices[$name]}°C"
-//    done
 }
 
 
