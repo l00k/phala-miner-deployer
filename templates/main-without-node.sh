@@ -33,28 +33,28 @@ start_host() {
     DONE=0
 
     for NODE_IP in "${NODES[@]}"; do
-        echo "Checking $NODE_IP"
+        echo "Checking $NODE"
 
-        STATUS=$(echo 'exit' | telnet $NODE_IP 9944 | grep "Connected to")
+        STATUS=$(echo 'exit' | telnet $NODE 9944 | grep "Connected to")
         if [[ $STATUS == '' ]]; then
             echo "Websocket is down!"
             continue
         fi
 
-        STATUS=$(curl -s -H "Content-Type: application/json" --data '{ "jsonrpc":"2.0", "method": "system_health", "params":[], "id":1 }' $NODE_IP:9933 | grep '"isSyncing":true')
+        STATUS=$(curl -s -H "Content-Type: application/json" --data '{ "jsonrpc":"2.0", "method": "system_health", "params":[], "id":1 }' $NODE:9933 | grep '"isSyncing":true')
         if [[ $STATUS == '' ]]; then
             echo "Node is syncing!"
             continue
         fi
 
         for TRY in {1..3}; do
-            echo "Connecting to $NODE_IP"
+            echo "Connecting to $NODE (try $TRY)"
 
             # start host
             sudo docker run -d -ti --rm \
                 --name phala-phost \
                 -e PRUNTIME_ENDPOINT="http://phala-pruntime:8000" \
-                -e PHALA_NODE_WS_ENDPOINT="ws://$NODE_IP:9944" \
+                -e PHALA_NODE_WS_ENDPOINT="ws://$NODE:9944" \
                 -e MNEMONIC="{{miner_mnemonic}}" \
                 -e EXTRA_OPTS="-r" \
                 --link phala-pruntime \

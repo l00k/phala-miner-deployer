@@ -48,24 +48,55 @@ restart_runtime() {
 }
 
 start_host() {
-    for TRY in {1..3}; do
-        # start host
-        sudo docker run -d -ti --rm \
-            --name phala-phost \
-            -e PRUNTIME_ENDPOINT="http://phala-pruntime:8000" \
-            -e PHALA_NODE_WS_ENDPOINT="ws://phala-node:9944" \
-            -e MNEMONIC="{{miner_mnemonic}}" \
-            -e EXTRA_OPTS="-r" \
-            --link phala-node \
-            --link phala-pruntime \
-            phalanetwork/phala-poc3-phost
+    NODES=("phala-node")
+    NODES+=({{node_ips}})
+    DONE=0
 
-        sleep 10
+    for NODE in "${NODES[@]}"; do
+        PUBLIC_ADDRESS=$NODE
+        if [[ $NODE == "phala-node" ]]; then
+            PUBLIC_ADDRESS="localhost"
+        fi
 
-        STATUS=$(sudo docker ps | grep "phala-phost")
+        echo "Checking $NODE / $PUBLIC_ADDRESS"
+
+        STATUS=$(echo 'exit' | telnet $PUBLIC_ADDRESS 9944 | grep "Connected to")
+        if [[ $STATUS == '' ]]; then
+            echo "Websocket is down!"
+            continue
+        fi
+
+        STATUS=$(curl -s -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"system_health","params":[],"id":1}' $PUBLIC_ADDRESS:9933 | grep '"isSyncing":true')
         if [[ $STATUS != '' ]]; then
-            echo "It works"
-            DONE=1
+            echo "Node is syncing!"
+            continue
+        fi
+
+        for TRY in {1..3}; do
+            echo "Connecting to $NODE / $PUBLIC_ADDRESS (try $TRY)"
+
+            # start host
+            sudo docker run -d -ti --rm \
+                --name phala-phost \
+                -e PRUNTIME_ENDPOINT="http://phala-pruntime:8000" \
+                -e PHALA_NODE_WS_ENDPOINT="ws://$NODE:9944" \
+                -e MNEMONIC="{{miner_mnemonic}}" \
+                -e EXTRA_OPTS="-r" \
+                --link phala-node \
+                --link phala-pruntime \
+                phalanetwork/phala-poc3-phost
+
+            sleep 10
+
+            STATUS=$(sudo docker ps | grep "phala-phost")
+            if [[ $STATUS != '' ]]; then
+                echo "It works"
+                DONE=1
+                break
+            fi
+        done
+
+        if [[ $DONE == 1 ]]; then
             break
         fi
     done

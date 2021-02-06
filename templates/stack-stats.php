@@ -67,7 +67,7 @@ function checkNode() {
     }
 
     // check service status
-    $serviceStatusRaw = `curl -s -H "Content-Type: application/json" --data '{ "jsonrpc":"2.0", "method": "system_health", "params":[], "id":1 }' localhost:9933`;
+    $serviceStatusRaw = `curl -s -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"system_health","params":[],"id":1}' localhost:9933`;
     $serviceStatusJson = json_decode($serviceStatusRaw, true);
     $serviceStatus = $serviceStatusJson['result'];
     if (!$serviceStatus['isSyncing']) {
