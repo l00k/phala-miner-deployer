@@ -49,6 +49,8 @@ https://deployer.org/
 `phala:driver:install <tag>` - installs DCAP / SGX driver (based on support) [docs](https://wiki.phala.network/en-us/docs/poc3/1-1-hardware-configuration/#sgx-driver-installation)  
 `phala:check_compatibility <tag>` - verifies miner compatibility [docs](https://wiki.phala.network/en-us/docs/poc3/1-1-hardware-configuration/#double-check-the-sgx-capability)  
 `phala:stack:deploy <tag>` - deploys 3 scripts (based on templates from `templates/`) and installs system service `phala-stack`  
+`phala:stack:upgrade <tag>` - upgrades stack docker images  
+`phala:stack:stats <tag>` - collects miner stats  
   
 For all those commands `<tag>` needs to be replaced with deployer instance name (example `my-nice-miner`) or with `miner` (in order to run command for all instances)  
 
