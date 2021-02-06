@@ -296,7 +296,7 @@ task('phala:stack:start', function () {
     $target = Context::get()->getHost();
     $hostname = $target->getHostname();
 
-    writeln("<info>Restarting ${hostname}</info>");
+    writeln("<info>Starting ${hostname}</info>");
 
     $isMainScriptWorking = test('[[ `pgrep {{deploy_path}}/main.sh` != "" ]]');
     if ($isMainScriptWorking) {
