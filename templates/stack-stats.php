@@ -134,28 +134,33 @@ function checkSystem() {
     // cpu
     $devices['cpu'] = [];
 
-    $raw = `lscpu | grep "Model name"`;
-    $devices['cpu']['name'] = trim(preg_replace('/^Model name:[\s]+(.*)$/', '$1', $raw));
+    $raw = `cat /proc/cpuinfo | grep "model name" | head -n 1`;
+    $devices['cpu']['name'] = trim(preg_replace('/^model name[\s]+:[\s]+(.*)$/', '$1', $raw));
 
-    $raw = `lscpu | grep "Core(s) per socket"`;
-    $devices['cpu']['cores'] = trim(preg_replace('/^Core\(s\) per socket:[\s]+(.*)$/', '$1', $raw));
-
-    $raw = `lscpu | grep "CPU MHz"`;
-    $devices['cpu']['freq'] = trim(preg_replace('/^CPU MHz:[\s]+(.*)$/', '$1', $raw));
+    $raw = `cat /proc/cpuinfo | grep "cpu cores" | head -n 1`;
+    $devices['cpu']['cores'] = trim(preg_replace('/^cpu cores[\s]+:[\s]+(.*)$/', '$1', $raw));
 
     // temperatures
     $temperatures = [];
 
-    $raw = `sensors -j`;
-    $json = json_decode($raw, true);
+    $rawTypes = array_filter(explode(PHP_EOL, `cat /sys/class/thermal/thermal_zone*/type`));
+    $types = array_map(
+        function($value, $index) { return $value . '-' . $index; },
+        $rawTypes,
+        array_keys($rawTypes)
+    );
+    $rawTemps = array_filter(explode(PHP_EOL, `cat /sys/class/thermal/thermal_zone*/temp`));
+    $temps = array_combine(
+        $types,
+        array_map('floatval', $rawTemps)
+    );
 
-    foreach ($json as $entryName => $entryData) {
-        if (strpos($entryName, 'coretemp') === 0) {
-            $devices['cpu']['temp'] = $entryData['Package id 0']['temp1_input'];
-            $temperatures['cpu'] = $entryData['Package id 0']['temp1_input'];
-        }
+    $cpuIndices = array_filter($types, function($type) { return strpos($type, 'pkg_temp') !== false; });
+    if ($cpuIndices) {
+        $cpuIndex = array_shift($cpuIndices);
+        $devices['cpu']['temp'] = $temps[$cpuIndex] / 1000;
+        $temperatures['cpu'] = $temps[$cpuIndex] / 1000;
     }
-
 
     // display
     displayHeader('Devices');
@@ -173,13 +178,7 @@ function checkSystem() {
 }
 
 
-while (true) {
-    clear();
-
-    checkNode();
-    checkRuntime();
-    checkHost();
-    checkSystem();
-
-    sleep(5);
-}
+checkNode();
+checkRuntime();
+checkHost();
+checkSystem();

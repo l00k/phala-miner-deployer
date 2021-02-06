@@ -207,7 +207,7 @@ task('phala:stack:deploy', function () {
     $scripts = [
         'rc-script.sh' => 'rc-script.sh',
         'main.sh' => $withNode ? 'main-with-node.sh' : 'main-without-node.sh',
-        'monitor-hooks.php' => 'monitor-hooks.php'
+        'stack-stats.php' => 'stack-stats.php'
     ];
 
     // collect all nodes ips
@@ -243,7 +243,7 @@ task('phala:stack:deploy', function () {
     if (testLocally('[[ -e ./build ]]')) {
         runLocally('rm -r ./build');
     }
-    runLocally('mkdir -p ./build/{{target}}');
+    runLocally("mkdir -p ./build/$hostname");
 
     // step 2 - generate scripts
     writeln('<comment>Genereting scripts (local)</comment>');
@@ -252,7 +252,7 @@ task('phala:stack:deploy', function () {
         writeln($scriptSrc);
 
         $templatePath = __DIR__ . '/templates/' . $scriptSrc;
-        $scriptPath = __DIR__ . '/build/'. parse('{{target}}') .'/' . $scriptSrc;
+        $scriptPath = __DIR__ . "/build/$hostname/" . $scriptSrc;
 
         $templateContent = file_get_contents($templatePath);
         $scriptContent = parse($templateContent);
@@ -271,7 +271,7 @@ task('phala:stack:deploy', function () {
     foreach ($scripts as $scriptDest => $scriptSrc) {
         writeln($scriptDest);
 
-        $localPath = __DIR__ . '/build/'. parse('{{target}}') .'/' . $scriptSrc;
+        $localPath = __DIR__ . "/build/$hostname/" . $scriptSrc;
         $remotePath = '{{deploy_path}}/' . $scriptDest;
 
         upload($localPath, $remotePath);
@@ -289,4 +289,46 @@ task('phala:stack:deploy', function () {
 
     run('update-rc.d -f {{service_name}} remove');
     run('update-rc.d {{service_name}} defaults');
+});
+
+desc('Upgrade docker containers');
+task('phala:stack:upgrade', function () {
+    $isMainScriptWorking = test('[[ `pgrep {{deploy_path}}/main.sh` != "" ]]');
+    if ($isMainScriptWorking) {
+        run('kill -s 9 $(pgrep {{deploy_path}}/main.sh)');
+    }
+
+    run('docker stop phala-phost || true');
+    run('docker stop phala-pruntime || true');
+    run('docker stop phala-node || true');
+
+    run('docker pull phalanetwork/phala-poc3-node');
+    run('docker pull phalanetwork/phala-poc3-pruntime');
+    run('docker pull phalanetwork/phala-poc3-phost');
+
+    run('nohup {{deploy_path}}/main.sh start stack 1 &');
+});
+
+desc('Fetch stack stats');
+task('phala:stack:stats', function () {
+    $target = Context::get()->getHost();
+    $hostname = $target->getHostname();
+
+    writeln("<info>Fetching ${hostname} stats</info>");
+
+    // prepare to php
+    $dkmsInstalled = test('[[ `which php` == "" ]]');
+    if ($dkmsInstalled) {
+        writeln('Installing PHP');
+        run('sudo apt-get install -y php');
+    }
+
+    // prepare sensors
+    $dkmsInstalled = test('[[ `which sensors` == "" ]]');
+    if ($dkmsInstalled) {
+        writeln('Installing PHP');
+        run('sudo apt-get install -y php');
+    }
+
+    run('{{deploy_path}}/stack-stats.php', [ 'tty' => true ]);
 });

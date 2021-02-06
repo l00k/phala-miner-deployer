@@ -79,6 +79,7 @@ my-nice-miner:
     node_name: 'my-nice-miner'
     miner_mnemonic: 'secret words here secret words here secret words here secret words here'
 <other node internal name>:
+    public_stats: true
     (...)
 ```
 `my-nice-miner` - deployer host identifier (make it unique for each node)  
@@ -88,7 +89,8 @@ my-nice-miner:
 `<node>.deploy_path` - directory where all scripts and node data will be placed  
 `<node>.use_as_node` - true / false  
 `<node>.node_name` - place name which will be used publically by Phala network to identify your node  
-`<node>.miner_mnemonic` - your controller account mnemonic
+`<node>.miner_mnemonic` - your controller account mnemonic  
+`<node>.public_stats` - should stack stats be submited to monitoring tool?  
 
 ### Extra parameters (deploy-ext.inc.php)
 In this file you can place extra parameters definition
