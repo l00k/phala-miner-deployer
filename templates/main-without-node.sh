@@ -21,6 +21,8 @@ start_runtime() {
         -v {{deploy_path}}/phala-pruntime-data:/root/data \
         {{pruntime_devices}} \
         phalanetwork/phala-poc3-pruntime
+
+    sleep 5
 }
 
 stop_runtime() {
@@ -86,11 +88,7 @@ stop_host() {
 
 start_stack() {
     sleep $DELAY
-
     start_runtime
-
-    sleep 5
-
     start_host
 }
 

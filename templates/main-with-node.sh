@@ -39,6 +39,8 @@ start_runtime() {
         -v {{deploy_path}}/phala-pruntime-data:/root/data \
         {{pruntime_devices}} \
         phalanetwork/phala-poc3-pruntime
+
+    sleep 5
 }
 
 stop_runtime() {
@@ -111,18 +113,7 @@ stop_host() {
 
 start_stack() {
     start_node
-
-    sleep 5
-    STATUS=$(sudo docker ps | grep "phala-node")
-    if [[ $STATUS == '' ]]; then
-        echo "Restart node"
-        restart_node
-    fi
-
     start_runtime
-
-    sleep 5
-
     start_host
 }
 
