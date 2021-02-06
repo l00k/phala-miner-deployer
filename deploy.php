@@ -206,7 +206,8 @@ task('phala:stack:deploy', function () {
 
     $scripts = [
         'rc-script.sh' => 'rc-script.sh',
-        'main.sh' => $withNode ? 'main-with-node.sh' : 'main-without-node.sh'
+        'main.sh' => $withNode ? 'main-with-node.sh' : 'main-without-node.sh',
+        'monitor-hooks.php' => 'monitor-hooks.php'
     ];
 
     // collect all nodes ips

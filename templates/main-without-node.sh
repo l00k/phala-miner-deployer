@@ -34,9 +34,16 @@ start_host() {
 
     for NODE_IP in "${NODES[@]}"; do
         echo "Checking $NODE_IP"
+
         STATUS=$(echo 'exit' | telnet $NODE_IP 9944 | grep "Connected to")
         if [[ $STATUS == '' ]]; then
-            echo "Down!"
+            echo "Websocket is down!"
+            continue
+        fi
+
+        STATUS=$(curl -s -H "Content-Type: application/json" --data '{ "jsonrpc":"2.0", "method": "system_health", "params":[], "id":1 }' $NODE_IP:9933 | grep '"isSyncing":true')
+        if [[ $STATUS == '' ]]; then
+            echo "Node is syncing!"
             continue
         fi
 
@@ -78,9 +85,11 @@ start_stack() {
 
     start_runtime
 
+    sleep 5
+
     start_host
 
-#     start_watch
+    start_watch
 }
 
 stop_stack() {
@@ -88,7 +97,7 @@ stop_stack() {
     stop_runtime
 }
 
-# start_watch() {
+start_watch() {
 #     STATUS=$(sudo docker ps | grep "phala-pruntime")
 #     if [[ $STATUS == '' ]]; then
 #         start_runtime
@@ -100,12 +109,12 @@ stop_stack() {
 #         start_host
 #         sleep 1
 #     fi
-#
-#     # wait and repeat
-#     sleep 60
-#
-#     start_watch
-# }
+
+    # wait and repeat
+    sleep 60
+
+    start_watch
+}
 
 
 # RUN

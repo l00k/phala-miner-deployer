@@ -87,9 +87,11 @@ start_stack() {
 
     start_runtime
 
+    sleep 5
+
     start_host
 
-#     start_watch
+    start_watch
 }
 
 stop_stack() {
@@ -98,7 +100,7 @@ stop_stack() {
     stop_node
 }
 
-# start_watch() {
+start_watch() {
 #     STATUS=$(sudo docker ps | grep "phala-node")
 #     if [[ $STATUS == '' ]]; then
 #         start_node
@@ -117,11 +119,11 @@ stop_stack() {
 #         sleep 1
 #     fi
 #
-#     # wait and repeat
-#     sleep 60
-#
-#     start_watch
-# }
+    # wait and repeat
+    sleep 60
+
+    start_watch
+}
 
 
 # RUN

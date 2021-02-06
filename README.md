@@ -20,8 +20,9 @@ https://wiki.phala.network/en-us/docs/poc3/
 Feel free to contact me on phala discord @l00k
 
 ### Additional features
-- `run.sh` script selects node instance based on current machine state. So if one of your devices boots up (may have local database out of sync) scripts telnet's each node to find running one. Next `phala-phost` is executed with working node ;)  
+- `run.sh` script selects node instance based on node state. So if one of your devices boots up (may have local database out of sync) scripts telnet's each node to find running one. Next `phala-phost` is executed with working node ;)  
 - rc script ensures node will be stopped before device shutdown / reboot (to prevent database crash)  
+- stats monitor - check `monitor-hooks.php`
 
 ## Requirements
 
