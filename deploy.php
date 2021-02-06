@@ -291,8 +291,8 @@ task('phala:stack:deploy', function () {
     run('update-rc.d {{service_name}} defaults');
 });
 
-desc('Restart stack');
-task('phala:stack:restart', function () {
+desc('Start stack');
+task('phala:stack:start', function () {
     $target = Context::get()->getHost();
     $hostname = $target->getHostname();
 
@@ -303,7 +303,7 @@ task('phala:stack:restart', function () {
         run('kill -s 9 $(pgrep {{deploy_path}}/main.sh)');
     }
 
-    run('nohup {{deploy_path}}/main.sh start stack 1 &', [ 'tty' => true ]);
+    run('{{deploy_path}}/main.sh start stack 1', [ 'tty' => true ]);
 });
 
 
@@ -322,7 +322,7 @@ task('phala:stack:upgrade', function () {
     run('docker pull phalanetwork/phala-poc3-pruntime');
     run('docker pull phalanetwork/phala-poc3-phost');
 
-    run('nohup {{deploy_path}}/main.sh start stack 1 &', [ 'tty' => true ]);
+    run('{{deploy_path}}/main.sh start stack 1', [ 'tty' => true ]);
 });
 
 desc('Fetch stack stats');

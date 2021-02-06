@@ -121,8 +121,6 @@ start_stack() {
     sleep 5
 
     start_host
-
-    start_watch
 }
 
 stop_stack() {
@@ -173,6 +171,9 @@ start)
     stack)
         start_stack
         ;;
+    watch)
+        start_watch
+        ;;
     *)
         exit 1
         ;;
@@ -191,19 +192,6 @@ stop)
         ;;
     stack)
         stop_stack
-        ;;
-    *)
-        exit 1
-        ;;
-    esac
-    ;;
-restart)
-    case "$2" in
-    node)
-        restart_node
-        ;;
-    runtime)
-        restart_runtime
         ;;
     *)
         exit 1

@@ -88,8 +88,6 @@ start_stack() {
     sleep 5
 
     start_host
-
-    start_watch
 }
 
 stop_stack() {
@@ -145,16 +143,6 @@ stop)
         ;;
     stack)
         stop_stack
-        ;;
-    *)
-        exit 1
-        ;;
-    esac
-    ;;
-restart)
-    case "$2" in
-    runtime)
-        restart_runtime
         ;;
     *)
         exit 1
