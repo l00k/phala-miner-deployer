@@ -10,6 +10,11 @@ if [[ $DELAY == '' ]]; then
 fi
 
 start_runtime() {
+    STATUS=$(sudo docker ps | grep "phala-pruntime")
+    if [[ $STATUS != '' ]]; then
+        return
+    fi
+
     sudo docker run -dit --rm \
         --name phala-pruntime \
         -p 8000:8000 \
@@ -22,13 +27,12 @@ stop_runtime() {
     sudo docker stop phala-pruntime
 }
 
-restart_runtime() {
-    stop_runtime
-    rm -r {{deploy_path}}/phala-pruntime-data
-    start_runtime
-}
-
 start_host() {
+    STATUS=$(sudo docker ps | grep "phala-phost")
+    if [[ $STATUS != '' ]]; then
+        return
+    fi
+
     NODES=({{node_ips}})
     DONE=0
 
@@ -127,6 +131,9 @@ start)
         ;;
     stack)
         start_stack
+        ;;
+    watch)
+        start_watch
         ;;
     *)
         exit 1

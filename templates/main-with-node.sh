@@ -45,12 +45,6 @@ stop_runtime() {
     sudo docker stop phala-pruntime
 }
 
-restart_runtime() {
-    stop_runtime
-    rm -r {{deploy_path}}/phala-pruntime-data
-    start_runtime
-}
-
 start_host() {
     STATUS=$(sudo docker ps | grep "phala-phost")
     if [[ $STATUS != '' ]]; then
