@@ -72,7 +72,7 @@ start_host() {
             continue
         fi
 
-        STATUS=$(curl -s -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"system_health","params":[],"id":1}' $PUBLIC_ADDRESS:9933 | grep '"isSyncing":true')
+        STATUS=$(curl -s -H "Content-Type: application/json" --data '{ "jsonrpc":"2.0", "method": "system_health", "params":[], "id":1 }' $PUBLIC_ADDRESS:9933 | grep '"isSyncing":true')
         if [[ $STATUS != '' ]]; then
             echo "Node is syncing!"
             continue
