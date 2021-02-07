@@ -14,6 +14,8 @@ set('allow_anonymous_stats', false);
 
 // project configuration
 set('service_name', 'phala-stack');
+set('network', 'main');
+set('use_as_node', false);
 inventory('nodes.yml');
 
 
@@ -198,11 +200,12 @@ task('phala:stack:deploy', function () {
     $target = Context::get()->getHost();
 
     $hostname = $target->getHostname();
-    $withNode = $target->get('use_as_node', false)
+    $withNode = $target->get('use_as_node');
+    $withNodeText = $withNode
         ? 'with node'
         : 'without node';
 
-    writeln("<info>Deploying to ${hostname} (${withNode})</info>");
+    writeln("<info>Deploying to ${hostname} (${withNodeText})</info>");
 
     $scripts = [
         'rc-script.sh' => 'rc-script.sh',
@@ -211,12 +214,27 @@ task('phala:stack:deploy', function () {
     ];
 
     // collect all nodes ips
-    $nodes = [];
+    $nodesByNetwork = [];
+
     foreach (Deployer::get()->hosts as $host) {
+        $network = $host->get('network');
         $useAsNode = (bool) $host->get('use_as_node');
         if ($useAsNode) {
-            $nodes[] = $host->getRealHostname();
+            if (!isset($nodesByNetwork[$network])) {
+                $nodesByNetwork[$network] = [];
+            }
+            $nodesByNetwork[$network][] = $host->get('node_ip');
         }
+    }
+
+    $nodes = [];
+
+    if ($target->get('force_node_ip', false)) {
+        $nodes[] = $target->get('force_node_ip');
+    }
+    else {
+        $network = $target->get('network');
+        $nodes = $nodesByNetwork[$network];
     }
 
     $nodeIpsRaw = '"' . join('" "', $nodes) . '"';
