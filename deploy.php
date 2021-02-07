@@ -324,6 +324,18 @@ task('phala:stack:start', function () {
     run('{{deploy_path}}/main.sh start stack 1', [ 'tty' => true ]);
 });
 
+desc('Upgrade docker containers');
+task('phala:stack:stop', function () {
+    $isMainScriptWorking = test('[[ `pgrep {{deploy_path}}/main.sh` != "" ]]');
+    if ($isMainScriptWorking) {
+        run('kill -s 9 $(pgrep {{deploy_path}}/main.sh)');
+    }
+
+    run('docker stop phala-phost || true');
+    run('docker stop phala-pruntime || true');
+    run('docker stop phala-node || true');
+});
+
 
 desc('Upgrade docker containers');
 task('phala:stack:upgrade', function () {

@@ -39,7 +39,7 @@ start_host() {
     NODES=({{node_ips}})
     DONE=0
 
-    for NODE_IP in "${NODES[@]}"; do
+    for NODE in "${NODES[@]}"; do
         echo "Checking $NODE"
 
         STATUS=$(echo 'exit' | telnet $NODE 9944 | grep "Connected to")
