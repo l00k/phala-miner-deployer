@@ -324,8 +324,11 @@ task('phala:stack:start', function () {
     run('{{deploy_path}}/main.sh start stack 1', [ 'tty' => true ]);
 });
 
-desc('Upgrade docker containers');
+desc('Stop stack');
 task('phala:stack:stop', function () {
+    $target = Context::get()->getHost();
+    $withNode = $target->get('use_as_node');
+
     $isMainScriptWorking = test('[[ `pgrep {{deploy_path}}/main.sh` != "" ]]');
     if ($isMainScriptWorking) {
         run('kill -s 9 $(pgrep {{deploy_path}}/main.sh)');
@@ -333,26 +336,33 @@ task('phala:stack:stop', function () {
 
     run('docker stop phala-phost || true');
     run('docker stop phala-pruntime || true');
-    run('docker stop phala-node || true');
+    if ($withNode) {
+        run('docker stop phala-node || true');
+    }
 });
 
 
 desc('Upgrade docker containers');
 task('phala:stack:upgrade', function () {
+    $target = Context::get()->getHost();
+    $withNode = $target->get('use_as_node');
+
     $isMainScriptWorking = test('[[ `pgrep {{deploy_path}}/main.sh` != "" ]]');
     if ($isMainScriptWorking) {
         run('kill -s 9 $(pgrep {{deploy_path}}/main.sh)');
     }
 
-    run('docker stop phala-phost || true');
+    if ($withNode) {
+        run('docker stop phala-phost || true');
+    }
     run('docker stop phala-pruntime || true');
     run('docker stop phala-node || true');
 
-    run('docker pull phalanetwork/phala-poc3-node');
-    run('docker pull phalanetwork/phala-poc3-pruntime');
-    run('docker pull phalanetwork/phala-poc3-phost');
-
-    run('{{deploy_path}}/main.sh start stack 1', [ 'tty' => true ]);
+    if ($withNode) {
+        run('docker pull phalanetwork/phala-poc3-node', [ 'tty' => true ]);
+    }
+    run('docker pull phalanetwork/phala-poc3-pruntime', [ 'tty' => true ]);
+    run('docker pull phalanetwork/phala-poc3-phost', [ 'tty' => true ]);
 });
 
 desc('Fetch stack stats');

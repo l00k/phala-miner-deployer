@@ -128,7 +128,6 @@ function checkHost() {
 
 
 function checkSystem() {
-
     $devices = [];
 
     // cpu
@@ -178,7 +177,14 @@ function checkSystem() {
 }
 
 
+function checkLog() {
+    displayHeader('Host logs');
+    echo `docker logs --tail 10 phala-phost`;
+}
+
+
 checkNode();
 checkRuntime();
 checkHost();
 checkSystem();
+checkLog();
