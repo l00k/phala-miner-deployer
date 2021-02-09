@@ -87,7 +87,7 @@ task('phala:driver:install', function () {
     $dkmsInstalled = test('[[ `which dkms` == "" ]]');
     if ($dkmsInstalled) {
         writeln('Installing dkms');
-        run('sudo apt-get install -y dkms');
+        run('sudo apt-get install -y dkms', [ 'tty' => true ]);
     }
 
     // first - try install DCAP
@@ -321,7 +321,7 @@ task('phala:stack:start', function () {
         run('kill -s 9 $(pgrep {{deploy_path}}/main.sh)');
     }
 
-    run('{{deploy_path}}/main.sh start stack 1', [ 'tty' => true ]);
+    run('{{deploy_path}}/main.sh start stack 1');
 });
 
 desc('Stop stack');
@@ -339,6 +339,17 @@ task('phala:stack:stop', function () {
     if ($withNode) {
         run('docker stop phala-node || true');
     }
+});
+
+desc('Restart host');
+task('phala:stack:restart', function () {
+    $isMainScriptWorking = test('[[ `pgrep {{deploy_path}}/main.sh` != "" ]]');
+    if ($isMainScriptWorking) {
+        run('kill -s 9 $(pgrep {{deploy_path}}/main.sh)');
+    }
+
+    run('docker stop phala-phost || true');
+    run('{{deploy_path}}/main.sh start host');
 });
 
 
