@@ -309,6 +309,15 @@ task('phala:stack:deploy', function () {
     run('update-rc.d {{service_name}} defaults');
 });
 
+desc('Reboot device');
+task('phala:stack:reboot', function () {
+    $target = Context::get()->getHost();
+    $hostname = $target->getHostname();
+
+    writeln("<info>Rebooting ${hostname}</info>");
+    run('sudo reboot');
+});
+
 desc('Start stack');
 task('phala:stack:start', function () {
     $target = Context::get()->getHost();

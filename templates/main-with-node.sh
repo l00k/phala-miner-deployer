@@ -113,9 +113,12 @@ stop_host() {
 }
 
 start_stack() {
+    sleep $DELAY
     start_node
     start_runtime
     start_host
+
+    start_watch &
 }
 
 stop_stack() {
@@ -125,24 +128,24 @@ stop_stack() {
 }
 
 start_watch() {
-#     STATUS=$(sudo docker ps | grep "phala-node")
-#     if [[ $STATUS == '' ]]; then
-#         start_node
-#         sleep 1
-#     fi
-#
-#     STATUS=$(sudo docker ps | grep "phala-pruntime")
-#     if [[ $STATUS == '' ]]; then
-#         start_runtime
-#         sleep 1
-#     fi
-#
-#     STATUS=$(sudo docker ps | grep "phala-phost")
-#     if [[ $STATUS == '' ]]; then
-#         start_host
-#         sleep 1
-#     fi
-#
+     STATUS=$(sudo docker ps | grep "phala-node")
+     if [[ $STATUS == '' ]]; then
+         start_node
+         sleep 10
+     fi
+
+     STATUS=$(sudo docker ps | grep "phala-pruntime")
+     if [[ $STATUS == '' ]]; then
+         start_runtime
+         sleep 10
+     fi
+
+     STATUS=$(sudo docker ps | grep "phala-phost")
+     if [[ $STATUS == '' ]]; then
+         start_host
+         sleep 10
+     fi
+
     # wait and repeat
     sleep 60
 
