@@ -330,7 +330,7 @@ task('phala:stack:start', function () {
         run('kill -s 9 $(pgrep {{deploy_path}}/main.sh)');
     }
 
-    run('{{deploy_path}}/main.sh start stack 1');
+    run('{{deploy_path}}/main.sh start stack 1 &');
 });
 
 desc('Stop stack');
