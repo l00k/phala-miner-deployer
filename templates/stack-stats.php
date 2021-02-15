@@ -71,11 +71,11 @@ function checkNode(): bool {
     $serviceStatusJson = json_decode($serviceStatusRaw, true);
     $serviceStatus = $serviceStatusJson['result'];
     if (!$serviceStatus['isSyncing']) {
-        return true;
         displayInfo('Node is in sync', 1);
     }
     else {
         displayWarn('Node is syncing', 1);
+        return true;
     }
 
     return false;
