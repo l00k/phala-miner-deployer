@@ -49,7 +49,7 @@ function checkDockerContainer(string $name): int {
     return 0;
 }
 
-function checkNode() {
+function checkNode(): bool {
     displayHeader('Node');
 
     // check container
@@ -59,11 +59,11 @@ function checkNode() {
     }
     elseif ($status === 1) {
         displayComment('Container does not exist', 1);
-        return;
+        return false;
     }
     elseif ($status === 2) {
         displayError('Container is not runnning', 1);
-        return;
+        return false;
     }
 
     // check service status
@@ -71,14 +71,17 @@ function checkNode() {
     $serviceStatusJson = json_decode($serviceStatusRaw, true);
     $serviceStatus = $serviceStatusJson['result'];
     if (!$serviceStatus['isSyncing']) {
+        return true;
         displayInfo('Node is in sync', 1);
     }
     else {
         displayWarn('Node is syncing', 1);
     }
+
+    return false;
 }
 
-function checkRuntime() {
+function checkRuntime(): bool {
     displayHeader('Runtime');
 
     // check container
@@ -88,7 +91,7 @@ function checkRuntime() {
     }
     else {
         displayError('Container is not running', 1);
-        return;
+        return false;
     }
 
     // check service status
@@ -100,7 +103,7 @@ function checkRuntime() {
     }
     else {
         displayError('Runtime wrong status', 1);
-        return;
+        return true;
     }
 
     $getInfoPayload = json_decode($serviceStatusJson['payload'], true);
@@ -109,7 +112,10 @@ function checkRuntime() {
     }
     else {
         displayInfo('Runtime is not initialized. Did you start host?', 1);
+        return true;
     }
+
+    return false;
 }
 
 
@@ -120,10 +126,13 @@ function checkHost() {
     $status = checkDockerContainer('phala-phost');
     if ($status === 0) {
         displayInfo('Container is running', 1);
+        return true;
     }
     else {
         displayError('Container is not running', 1);
     }
+
+    return false;
 }
 
 function printTemperatures() {
@@ -180,9 +189,11 @@ function checkSystem() {
 }
 
 
-function checkLog() {
-    displayHeader('Host logs');
-    echo `docker logs --tail 10 phala-phost`;
+function checkLog($showLogFrom) {
+    foreach ($showLogFrom as $container) {
+        displayHeader("Logs from $container");
+        echo `docker logs --tail 10 $container`;
+    }
 }
 
 
@@ -195,10 +206,25 @@ if ($action) {
     }
 }
 else {
-    checkNode();
-    checkRuntime();
-    checkHost();
+    $showLogFrom = [];
+
+    $showLog = checkNode();
+    if ($showLog) {
+        $showLogFrom[] = 'phala-node';
+    }
+
+    $showLog = checkRuntime();
+    if ($showLog) {
+        $showLogFrom[] = 'phala-pruntime';
+    }
+
+    $showLog = checkHost();
+    if ($showLog) {
+        $showLogFrom[] = 'phala-phost';
+    }
+
     checkSystem();
-    checkLog();
+
+    checkLog($showLogFrom);
 }
 
