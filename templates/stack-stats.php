@@ -126,20 +126,7 @@ function checkHost() {
     }
 }
 
-
-function checkSystem() {
-    $devices = [];
-
-    // cpu
-    $devices['cpu'] = [];
-
-    $raw = `cat /proc/cpuinfo | grep "model name" | head -n 1`;
-    $devices['cpu']['name'] = trim(preg_replace('/^model name[\s]+:[\s]+(.*)$/', '$1', $raw));
-
-    $raw = `cat /proc/cpuinfo | grep "cpu cores" | head -n 1`;
-    $devices['cpu']['cores'] = trim(preg_replace('/^cpu cores[\s]+:[\s]+(.*)$/', '$1', $raw));
-
-    // temperatures
+function printTemperatures() {
     $temperatures = [];
 
     $rawTypes = array_filter(explode(PHP_EOL, `cat /sys/class/thermal/thermal_zone*/type`));
@@ -161,6 +148,24 @@ function checkSystem() {
         $temperatures['cpu'] = $temps[$cpuIndex] / 1000;
     }
 
+    foreach ($temperatures as $device => $temp) {
+        displayLog("$device\t${temp}°C", 1);
+    }
+}
+
+function checkSystem() {
+    $devices = [];
+
+    // cpu
+    $devices['cpu'] = [];
+
+    $raw = `cat /proc/cpuinfo | grep "model name" | head -n 1`;
+    $devices['cpu']['name'] = trim(preg_replace('/^model name[\s]+:[\s]+(.*)$/', '$1', $raw));
+
+    $raw = `cat /proc/cpuinfo | grep "cpu cores" | head -n 1`;
+    $devices['cpu']['cores'] = trim(preg_replace('/^cpu cores[\s]+:[\s]+(.*)$/', '$1', $raw));
+
+
     // display
     displayHeader('Devices');
     foreach ($devices as $type => $device) {
@@ -171,9 +176,7 @@ function checkSystem() {
     }
 
     displayHeader('Temperatures');
-    foreach ($temperatures as $device => $temp) {
-        displayLog("$device\t${temp}°C", 1);
-    }
+    printTemperatures();
 }
 
 
@@ -183,8 +186,19 @@ function checkLog() {
 }
 
 
-checkNode();
-checkRuntime();
-checkHost();
-checkSystem();
-checkLog();
+
+$action = $argv[1] ?? null;
+
+if ($action) {
+    if ($action === 'temp') {
+        printTemperatures();
+    }
+}
+else {
+    checkNode();
+    checkRuntime();
+    checkHost();
+    checkSystem();
+    checkLog();
+}
+

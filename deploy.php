@@ -409,3 +409,31 @@ task('phala:stack:stats', function () {
 
     run('{{deploy_path}}/stack-stats.php', [ 'tty' => true ]);
 });
+
+
+desc('Check device temps');
+task('phala:stack:temp', function () {
+    run('{{deploy_path}}/stack-stats.php temp');
+})->local();
+
+desc('Monitor temps');
+task('phala:stack:temp:monitor', function () {
+    while(true) {
+        runLocally('clear');
+
+        foreach (Deployer::get()->hosts as $host) {
+            $hostname = $host->getRealHostname();
+            runLocally("php ./vendor/bin/dep phala:stack:temp $hostname");
+        }
+
+        sleep(5000);
+    }
+
+    $isMainScriptWorking = test('[[ `pgrep {{deploy_path}}/main.sh` != "" ]]');
+    if ($isMainScriptWorking) {
+        run('kill -s 9 $(pgrep {{deploy_path}}/main.sh)');
+    }
+
+    run('docker stop phala-phost || true');
+    run('{{deploy_path}}/main.sh start host');
+})->local();
