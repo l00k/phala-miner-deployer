@@ -413,8 +413,8 @@ task('phala:stack:stats', function () {
 
 desc('Check device temps');
 task('phala:stack:temp', function () {
-    run('{{deploy_path}}/stack-stats.php temp');
-})->local();
+    run('{{deploy_path}}/stack-stats.php temp', [ 'tty' => true ]);
+});
 
 desc('Monitor temps');
 task('phala:stack:temp:monitor', function () {
@@ -423,17 +423,10 @@ task('phala:stack:temp:monitor', function () {
 
         foreach (Deployer::get()->hosts as $host) {
             $hostname = $host->getRealHostname();
+            echo $host->getHostname() . PHP_EOL;
             runLocally("php ./vendor/bin/dep phala:stack:temp $hostname");
         }
 
         sleep(5000);
     }
-
-    $isMainScriptWorking = test('[[ `pgrep {{deploy_path}}/main.sh` != "" ]]');
-    if ($isMainScriptWorking) {
-        run('kill -s 9 $(pgrep {{deploy_path}}/main.sh)');
-    }
-
-    run('docker stop phala-phost || true');
-    run('{{deploy_path}}/main.sh start host');
 })->local();
