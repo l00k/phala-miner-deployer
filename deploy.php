@@ -199,6 +199,11 @@ desc('Deploy stack');
 task('phala:stack:deploy', function () {
     $target = Context::get()->getHost();
 
+    // setup node name
+    if (!$target->get('node_name', false)) {
+        $target->set('node_name', $target->getHostname());
+    }
+
     $hostname = $target->getHostname();
     $withNode = $target->get('use_as_node');
     $withNodeText = $withNode
@@ -223,7 +228,10 @@ task('phala:stack:deploy', function () {
             if (!isset($nodesByNetwork[$network])) {
                 $nodesByNetwork[$network] = [];
             }
-            $nodesByNetwork[$network][] = $host->get('node_ip');
+
+            if ($host->get('node_ip', false)) {
+                $nodesByNetwork[$network][] = $host->get('node_ip');
+            }
         }
     }
 
