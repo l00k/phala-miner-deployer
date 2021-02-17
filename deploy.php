@@ -428,6 +428,21 @@ task('phala:stack:stats', function () {
     run('{{deploy_path}}/stack-stats.php', [ 'tty' => true ]);
 });
 
+desc('Setup cron for device state updater');
+task('phala:device-state-updater:setup-cron', function () {
+    $target = Context::get()->getHost();
+    $hostname = $target->getHostname();
+
+    writeln("<info>Setup cron for ${hostname}</info>");
+
+    run("
+        crontab -l > mycron.tmp
+        echo '* * * * * /usr/bin/php {{deploy_path}}/stack-stats.php' > mycron.tmp
+        crontab mycron.tmp
+        rm mycron.tmp
+    ", [ 'tty' => true ]);
+});
+
 
 desc('Check device temps');
 task('phala:stack:temp', function () {
