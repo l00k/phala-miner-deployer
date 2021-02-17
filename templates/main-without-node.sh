@@ -67,7 +67,7 @@ start_host() {
                 --link phala-pruntime \
                 phalanetwork/phala-poc3-phost
 
-            sleep 10
+            sleep 15
 
             STATUS=$(sudo docker ps | grep "phala-phost")
             if [[ $STATUS != '' ]]; then

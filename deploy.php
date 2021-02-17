@@ -25,6 +25,19 @@ if (file_exists($deployExtPath)) {
 }
 
 
+desc('Configure entire stack');
+task('phala:configure', function () {
+    $target = Context::get()->getHost();
+    $hostname = $target->getHostname();
+
+    runLocally("php ./vendor/bin/dep phala:docker:install $hostname", [ 'tty' => true ]);
+    runLocally("php ./vendor/bin/dep phala:driver:install $hostname", [ 'tty' => true ]);
+    runLocally("php ./vendor/bin/dep phala:check_compatibility $hostname", [ 'tty' => true ]);
+    runLocally("php ./vendor/bin/dep phala:stack:deploy $hostname", [ 'tty' => true ]);
+    runLocally("php ./vendor/bin/dep phala:stack:reboot $hostname", [ 'tty' => true ]);
+});
+
+
 desc('Install old docker (if necessary)');
 task('phala:docker:uninstall', function () {
     run('
@@ -215,7 +228,8 @@ task('phala:stack:deploy', function () {
     $scripts = [
         'rc-script.sh' => 'rc-script.sh',
         'main.sh' => $withNode ? 'main-with-node.sh' : 'main-without-node.sh',
-        'stack-stats.php' => 'stack-stats.php'
+        'stack-stats.php' => 'stack-stats.php',
+        'device-state-updater.php' => 'device-state-updater.php',
     ];
 
     // collect all nodes ips
@@ -266,8 +280,12 @@ task('phala:stack:deploy', function () {
     // step 1 - clear directories
     writeln('<comment>Clearing build directory (local)</comment>');
 
-    if (testLocally('[[ -e ./build ]]')) {
-        runLocally('rm -r ./build');
+    if (testLocally('[[ ! -e ./build ]]')) {
+        runLocally('mkdir -p ./build');
+    }
+
+    if (testLocally("[[ -e ./build/$hostname ]]")) {
+        runLocally("rm -r ./build/$hostname");
     }
     runLocally("mkdir -p ./build/$hostname");
 
