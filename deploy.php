@@ -436,11 +436,16 @@ task('phala:device-state-updater:setup-cron', function () {
     writeln("<info>Setup cron for ${hostname}</info>");
 
     run("
-        crontab -l > mycron.tmp
-        echo '* * * * * /usr/bin/php {{deploy_path}}/stack-stats.php' > mycron.tmp
-        crontab mycron.tmp
-        rm mycron.tmp
-    ", [ 'tty' => true ]);
+        sudo apt install -y php;
+        chmod +x {{deploy_path}}/stack-stats.php;
+        crontab -l > mycron.tmp;
+        echo '' >> mycron.tmp;
+        echo '' >> mycron.tmp;
+        echo '# phala device state updater' >> mycron.tmp;
+        echo '* * * * * {{deploy_path}}/device-state-updater.php' >> mycron.tmp;
+        crontab mycron.tmp;
+        rm mycron.tmp;
+    ");
 });
 
 
