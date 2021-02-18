@@ -15,6 +15,7 @@ LOGFILE=/var/log/{{service_name}}.log
 case "$1" in
     start)
         {{deploy_path}}/main.sh start stack &
+        [[ {{public_device_stats}} == "" ]] && {{deploy_path}}/main.sh start stats &
 
         touch $SUBSYSFILE
 

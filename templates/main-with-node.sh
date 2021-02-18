@@ -23,10 +23,6 @@ start_node() {
         phalanetwork/phala-poc3-node
 }
 
-stop_node() {
-    sudo docker stop phala-node
-}
-
 start_runtime() {
     STATUS=$(sudo docker ps | grep "phala-pruntime")
     if [[ $STATUS != '' ]]; then
@@ -42,10 +38,6 @@ start_runtime() {
 
     # wait for pruntime init
     sleep 10
-}
-
-stop_runtime() {
-    sudo docker stop phala-pruntime
 }
 
 start_host() {
@@ -108,25 +100,6 @@ start_host() {
     done
 }
 
-stop_host() {
-    sudo docker stop phala-phost
-}
-
-start_stack() {
-    sleep $DELAY
-    start_node
-    start_runtime
-    start_host
-
-    start_watch &
-}
-
-stop_stack() {
-    stop_host
-    stop_runtime
-    stop_node
-}
-
 start_watch() {
      STATUS=$(sudo docker ps | grep "phala-node")
      if [[ $STATUS == '' ]]; then
@@ -148,29 +121,60 @@ start_watch() {
 
     # wait and repeat
     sleep 60
-
     start_watch
 }
 
+start_stats() {
+    ./device-stats-updater.php
 
+    # wait and repeat
+    sleep 300
+    start_stats
+}
+
+start_stack() {
+    sleep $DELAY
+    start_node
+    start_runtime
+    start_host
+
+    start_watch &
+}
+
+
+# ##########
+# STOP TASKS
+
+stop_node() {
+    sudo docker stop phala-node
+}
+
+stop_runtime() {
+    sudo docker stop phala-pruntime
+}
+
+stop_host() {
+    sudo docker stop phala-phost
+}
+
+stop_stack() {
+    stop_host
+    stop_runtime
+    stop_node
+}
+
+
+# ###########
 # RUN
+
 case "$1" in
 start)
     case "$2" in
-    node)
-        start_node
-        ;;
-    runtime)
-        start_runtime
-        ;;
-    host)
-        start_host
-        ;;
     stack)
         start_stack
         ;;
-    watch)
-        start_watch
+    stats)
+        start_stats
         ;;
     *)
         exit 1
@@ -179,15 +183,6 @@ start)
     ;;
 stop)
     case "$2" in
-    node)
-        stop_node
-        ;;
-    runtime)
-        stop_runtime
-        ;;
-    host)
-        stop_host
-        ;;
     stack)
         stop_stack
         ;;

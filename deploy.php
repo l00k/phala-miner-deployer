@@ -209,7 +209,7 @@ task('phala:check_compatibility', function () {
 });
 
 desc('Deploy stack');
-task('phala:stack:deploy', function () {
+task('phala:deploy', function () {
     $target = Context::get()->getHost();
 
     // setup node name
@@ -228,9 +228,12 @@ task('phala:stack:deploy', function () {
     $scripts = [
         'rc-script.sh' => 'rc-script.sh',
         'main.sh' => $withNode ? 'main-with-node.sh' : 'main-without-node.sh',
-        'stack-stats.php' => 'stack-stats.php',
-        'device-state-updater.php' => 'device-state-updater.php',
     ];
+
+    $publicDeviceStats = get('public_device_stats', false);
+    if ($publicDeviceStats) {
+        $scripts['device-state-updater.php'] = 'device-state-updater.php';
+    };
 
     // collect all nodes ips
     $nodesByNetwork = [];
@@ -276,6 +279,11 @@ task('phala:stack:deploy', function () {
     }
 
     set('pruntime_devices', $dockerDevices);
+
+    // step 0 - install dependencies
+    if ($publicDeviceStats) {
+        run("which php || sudo apt install -y php");
+    }
 
     // step 1 - clear directories
     writeln('<comment>Clearing build directory (local)</comment>');
@@ -345,7 +353,7 @@ task('phala:stack:reboot', function () {
 });
 
 desc('Start stack');
-task('phala:stack:start', function () {
+task('phala:start', function () {
     $target = Context::get()->getHost();
     $hostname = $target->getHostname();
 
@@ -360,7 +368,7 @@ task('phala:stack:start', function () {
 });
 
 desc('Stop stack');
-task('phala:stack:stop', function () {
+task('phala:stop', function () {
     $target = Context::get()->getHost();
     $withNode = $target->get('use_as_node');
 
@@ -377,7 +385,7 @@ task('phala:stack:stop', function () {
 });
 
 desc('Restart host');
-task('phala:stack:restart', function () {
+task('phala:restart', function () {
     $isMainScriptWorking = test('[[ `pgrep {{deploy_path}}/main.sh` != "" ]]');
     if ($isMainScriptWorking) {
         run('kill -s 9 $(pgrep {{deploy_path}}/main.sh)');
@@ -389,7 +397,7 @@ task('phala:stack:restart', function () {
 
 
 desc('Upgrade docker containers');
-task('phala:stack:upgrade', function () {
+task('phala:upgrade', function () {
     $target = Context::get()->getHost();
     $withNode = $target->get('use_as_node');
 
@@ -411,60 +419,16 @@ task('phala:stack:upgrade', function () {
     run('docker pull phalanetwork/phala-poc3-phost', [ 'tty' => true ]);
 });
 
-desc('Fetch stack stats');
-task('phala:stack:stats', function () {
+
+task('phala:cron:cleanup', function () {
     $target = Context::get()->getHost();
     $hostname = $target->getHostname();
 
-    writeln("<info>Fetching ${hostname} stats</info>");
-
-    // prepare to php
-    $phpInstalled = test('[[ `which php` == "" ]]');
-    if ($phpInstalled) {
-        writeln('Installing PHP');
-        run('sudo apt-get install -y php');
-    }
-
-    run('{{deploy_path}}/stack-stats.php', [ 'tty' => true ]);
-});
-
-desc('Setup cron for device state updater');
-task('phala:device-state-updater:setup-cron', function () {
-    $target = Context::get()->getHost();
-    $hostname = $target->getHostname();
-
-    writeln("<info>Setup cron for ${hostname}</info>");
+    writeln("<info>Cleanup cron for ${hostname}</info>");
 
     run("
-        sudo apt install -y php;
-        chmod +x {{deploy_path}}/stack-stats.php;
-        crontab -l > mycron.tmp;
-        echo '' >> mycron.tmp;
-        echo '' >> mycron.tmp;
-        echo '# phala device state updater' >> mycron.tmp;
-        echo '* * * * * {{deploy_path}}/device-state-updater.php' >> mycron.tmp;
-        crontab mycron.tmp;
-        rm mycron.tmp;
+        crontab -l | sed -n '/device-state-updater/!p' | sed -n '/phala/!p' > cron.tmp
+        crontab cron.tmp;
+        rm cron.tmp;
     ");
 });
-
-
-desc('Check device temps');
-task('phala:stack:temp', function () {
-    run('{{deploy_path}}/stack-stats.php temp', [ 'tty' => true ]);
-});
-
-desc('Monitor temps');
-task('phala:stack:temp:monitor', function () {
-    while(true) {
-        runLocally('clear');
-
-        foreach (Deployer::get()->hosts as $host) {
-            $hostname = $host->getRealHostname();
-            echo $host->getHostname() . PHP_EOL;
-            runLocally("php ./vendor/bin/dep phala:stack:temp $hostname");
-        }
-
-        sleep(5000);
-    }
-})->local();
