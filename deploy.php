@@ -418,17 +418,3 @@ task('phala:upgrade', function () {
     run('docker pull phalanetwork/phala-poc3-pruntime', [ 'tty' => true ]);
     run('docker pull phalanetwork/phala-poc3-phost', [ 'tty' => true ]);
 });
-
-
-task('phala:cron:cleanup', function () {
-    $target = Context::get()->getHost();
-    $hostname = $target->getHostname();
-
-    writeln("<info>Cleanup cron for ${hostname}</info>");
-
-    run("
-        crontab -l | sed -n '/device-state-updater/!p' | sed -n '/phala/!p' > cron.tmp
-        crontab cron.tmp;
-        rm cron.tmp;
-    ");
-});
