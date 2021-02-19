@@ -98,7 +98,7 @@ start_watch() {
 }
 
 start_stats() {
-    ./device-stats-updater.php
+    ./device-state-updater.php
 
     # wait and repeat
     sleep 300
