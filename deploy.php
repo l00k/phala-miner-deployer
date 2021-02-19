@@ -364,7 +364,7 @@ task('phala:start', function () {
         run('kill -s 9 $(pgrep {{deploy_path}}/main.sh)');
     }
 
-    run('{{deploy_path}}/main.sh start stack 1 &');
+    run('nohup {{deploy_path}}/main.sh start stack 1 &');
 });
 
 desc('Stop stack');
@@ -392,7 +392,7 @@ task('phala:restart', function () {
     }
 
     run('docker stop phala-phost || true');
-    run('{{deploy_path}}/main.sh start host');
+    run('nohup {{deploy_path}}/main.sh start stack 1 &');
 });
 
 
@@ -417,4 +417,14 @@ task('phala:upgrade', function () {
     }
     run('docker pull phalanetwork/phala-poc3-pruntime', [ 'tty' => true ]);
     run('docker pull phalanetwork/phala-poc3-phost', [ 'tty' => true ]);
+});
+
+
+task('phala:stats:start', function () {
+    $target = Context::get()->getHost();
+    $hostname = $target->getHostname();
+
+    writeln("<info>Stats start for ${hostname}</info>");
+
+    run('{{deploy_path}}/main.sh start stats &');
 });
