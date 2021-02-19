@@ -33,8 +33,8 @@ task('phala:configure', function () {
     runLocally("php ./vendor/bin/dep phala:docker:install $hostname", [ 'tty' => true ]);
     runLocally("php ./vendor/bin/dep phala:driver:install $hostname", [ 'tty' => true ]);
     runLocally("php ./vendor/bin/dep phala:check_compatibility $hostname", [ 'tty' => true ]);
-    runLocally("php ./vendor/bin/dep phala:stack:deploy $hostname", [ 'tty' => true ]);
-    runLocally("php ./vendor/bin/dep phala:stack:reboot $hostname", [ 'tty' => true ]);
+    runLocally("php ./vendor/bin/dep phala:deploy $hostname", [ 'tty' => true ]);
+    runLocally("php ./vendor/bin/dep phala:reboot $hostname", [ 'tty' => true ]);
 });
 
 
@@ -344,7 +344,7 @@ task('phala:deploy', function () {
 });
 
 desc('Reboot device');
-task('phala:stack:reboot', function () {
+task('phala:reboot', function () {
     $target = Context::get()->getHost();
     $hostname = $target->getHostname();
 
