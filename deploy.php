@@ -27,6 +27,33 @@ if (file_exists($deployExtPath)) {
 }
 
 
+set('nodesByNetwork', function() {
+    $nodesByNetwork = [];
+
+    foreach (Deployer::get()->hosts as $host) {
+        $_hostname = $host->getHostname();
+        $network = $host->get('network');
+        $useAsNode = (bool) $host->get('use_as_node');
+        if ($useAsNode) {
+            if (!isset($nodesByNetwork[$network])) {
+                $nodesByNetwork[$network] = [];
+            }
+
+            if ($host->get('public_node_ip', false)) {
+                $nodesByNetwork[$network][] = $host->get('public_node_ip');
+            }
+            else {
+                $ip = runLocally("php ./vendor/bin/dep phala:get-local-network-ip -q $_hostname");
+                echo $ip . PHP_EOL;
+                $nodesByNetwork[$network][] = $ip;
+            }
+        }
+    }
+
+    return $nodesByNetwork;
+});
+
+
 desc('Configure entire stack');
 task('phala:configure', function () {
     $target = Context::get()->getHost();
@@ -238,28 +265,13 @@ task('phala:deploy', function () {
     };
 
     // collect all nodes ips
-    $nodesByNetwork = [];
-
-    foreach (Deployer::get()->hosts as $host) {
-        $network = $host->get('network');
-        $useAsNode = (bool) $host->get('use_as_node');
-        if ($useAsNode) {
-            if (!isset($nodesByNetwork[$network])) {
-                $nodesByNetwork[$network] = [];
-            }
-
-            if ($host->get('node_ip', false)) {
-                $nodesByNetwork[$network][] = $host->get('node_ip');
-            }
-        }
-    }
-
     $nodes = [];
 
     if ($target->get('force_node_ip', false)) {
         $nodes[] = $target->get('force_node_ip');
     }
     else {
+        $nodesByNetwork = get('nodesByNetwork');
         $network = $target->get('network');
         $nodes = $nodesByNetwork[$network];
     }
@@ -340,6 +352,11 @@ task('phala:deploy', function () {
         cd {{deploy_path}}
         ./rc-script.sh install
     ");
+});
+
+desc('Get local network IP');
+task('phala:get-local-network-ip', function () {
+    echo run("hostname -I | awk '{print $1}'");
 });
 
 desc('Reboot device');
