@@ -334,13 +334,10 @@ task('phala:deploy', function () {
     // step 4 - enable service
     writeln('<comment>Configuring service</comment>');
 
-    $serviceExists = test('[[ -e /etc/init.d/{{service_name}} ]]');
-    if (!$serviceExists) {
-        run("sudo ln -s {{deploy_path}}/rc-script.sh /etc/init.d/{{service_name}}");
-    }
-
-    run('update-rc.d -f {{service_name}} remove');
-    run('update-rc.d {{service_name}} defaults');
+    run("
+        cd {{deploy_path}}
+        ./rc-script.sh install
+    ");
 });
 
 desc('Reboot device');

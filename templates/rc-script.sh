@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 ### BEGIN INIT INFO
 # Provides:          {{service_name}}
@@ -15,21 +15,31 @@ LOGFILE=/var/log/{{service_name}}.log
 case "$1" in
     start)
         {{deploy_path}}/main.sh start stack &
-        [[ {{public_device_stats}} == "" ]] && {{deploy_path}}/main.sh start stats &
+        [[ {{public_device_stats}} == 1 ]] && {{deploy_path}}/main.sh start stats &
 
         touch $SUBSYSFILE
 
-        DATE=`date +"%Y-%m-%d"`
+        DATE=`date +"%F %T"`
         echo "$DATE starting service" >> $LOGFILE
+        exit 0
         ;;
     stop)
         {{deploy_path}}/main.sh stop stack
 
-        DATE=`date +"%Y-%m-%d"`
+        DATE=`date +"%F %T"`
         echo "$DATE stopping service" >> $LOGFILE
+        exit 0
+        ;;
+    install)
+        sudo update-rc.d phala-stack remove
+        sudo cp {{deploy_path}}/rc-script.sh /etc/init.d/phala-stack
+        sudo chmod +x /etc/init.d/phala-stack
+        sudo update-rc.d phala-stack defaults
+        exit 0
         ;;
     *)
         echo "Usage: $0 {start|stop}"
+        exit 1
 esac
 
 
