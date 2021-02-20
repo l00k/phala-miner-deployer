@@ -101,7 +101,7 @@ start_stats() {
     ./device-state-updater.php
 
     # wait and repeat
-    sleep 300
+    sleep 60
     start_stats
 }
 
