@@ -31,10 +31,11 @@ case "$1" in
         exit 0
         ;;
     install)
-        sudo update-rc.d phala-stack remove
-        sudo cp {{deploy_path}}/rc-script.sh /etc/init.d/phala-stack
-        sudo chmod +x /etc/init.d/phala-stack
-        sudo update-rc.d phala-stack defaults
+        update-rc.d {{service_name}} remove
+        [[ -e /etc/init.d/{{service_name}} ]] && rm /etc/init.d/{{service_name}}
+        cp {{deploy_path}}/rc-script.sh /etc/init.d/{{service_name}}
+        chmod +x /etc/init.d/{{service_name}}
+        update-rc.d {{service_name}} defaults
         exit 0
         ;;
     *)
