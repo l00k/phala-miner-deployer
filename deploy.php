@@ -43,9 +43,7 @@ set('nodesByNetwork', function() {
                 $nodesByNetwork[$network][] = $host->get('public_node_ip');
             }
             else {
-                $ip = runLocally("php ./vendor/bin/dep phala:get-local-network-ip -q $_hostname");
-                echo $ip . PHP_EOL;
-                $nodesByNetwork[$network][] = $ip;
+                $nodesByNetwork[$network][] = runLocally("php ./vendor/bin/dep phala:get-local-network-ip -q $_hostname");
             }
         }
     }
