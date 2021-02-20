@@ -2,7 +2,9 @@
 
 namespace Deployer;
 
+use Deployer\Exception\RuntimeException;
 use Deployer\Task\Context;
+use Symfony\Component\Process\Exception\ProcessTimedOutException;
 
 require 'recipe/common.php';
 
@@ -361,7 +363,10 @@ task('phala:start', function () {
         run('kill -s 9 $(pgrep {{deploy_path}}/main.sh)');
     }
 
-    run('nohup {{deploy_path}}/main.sh start stack 1 &');
+    try {
+        run('nohup {{deploy_path}}/main.sh start stack 1 &', [ 'timeout' => 1 ]);
+    }
+    catch(ProcessTimedOutException $e) {}
 });
 
 desc('Stop stack');
@@ -389,7 +394,11 @@ task('phala:restart', function () {
     }
 
     run('docker stop phala-phost || true');
-    run('nohup {{deploy_path}}/main.sh start stack 1 &');
+
+    try {
+        run('nohup {{deploy_path}}/main.sh start stack 1 &', [ 'timeout' => 1 ]);
+    }
+    catch(ProcessTimedOutException $e) {}
 });
 
 
@@ -423,5 +432,13 @@ task('phala:stats:start', function () {
 
     writeln("<info>Stats start for ${hostname}</info>");
 
-    run('{{deploy_path}}/main.sh start stats &');
+    try {
+        run('ps aux | grep "{{deploy_path}}/main.sh start stats" | grep -v "grep" | awk \'{print $2}\' | xargs kill');
+    }
+    catch(RuntimeException $e) {}
+
+    try {
+        run('nohup {{deploy_path}}/main.sh start stats &', [ 'timeout' => 1 ]);
+    }
+    catch(ProcessTimedOutException $e) {}
 });
