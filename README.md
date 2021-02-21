@@ -48,9 +48,9 @@ https://deployer.org/
 `phala:driver:check <tag>` - checks SGX driver [docs](https://wiki.phala.network/en-us/docs/poc3/1-1-hardware-configuration/#sgx-driver-installation)  
 `phala:driver:install <tag>` - installs DCAP / SGX driver (based on support) [docs](https://wiki.phala.network/en-us/docs/poc3/1-1-hardware-configuration/#sgx-driver-installation)  
 `phala:check_compatibility <tag>` - verifies miner compatibility [docs](https://wiki.phala.network/en-us/docs/poc3/1-1-hardware-configuration/#double-check-the-sgx-capability)  
-`phala:stack:deploy <tag>` - deploys 3 scripts (based on templates from `templates/`) and installs system service `phala-stack`  
-`phala:stack:upgrade <tag>` - upgrades stack docker images  
-`phala:stack:stats <tag>` - collects miner stats  
+`phala:deploy <tag>` - deploys 3 scripts (based on templates from `templates/`) and installs system service `phala-stack`  
+`phala:upgrade <tag>` - upgrades stack docker images  
+`phala:restart <tag>` - restarts stack  
   
 For all those commands `<tag>` needs to be replaced with deployer instance name (example `my-nice-miner`) or with `miner` (in order to run command for all instances)  
 
@@ -82,6 +82,7 @@ my-nice-miner:
     miner_mnemonic: 'secret words here secret words here secret words here secret words here'
 <other node internal name>:
     public_device_stats: true
+    network: 'network-name'
     (...)
 ```
 `my-nice-miner` - deployer host identifier (make it unique for each node)  
@@ -93,6 +94,7 @@ my-nice-miner:
 `<node>.node_name` - place name which will be used publically by Phala network to identify your node  
 `<node>.miner_mnemonic` - your controller account mnemonic  
 `<node>.public_device_stats` - should stack stats be submited to monitoring tool?  
+`<node>.network` - network name - all devices in same network will share nodes, node for stach will be selected from network pool  
 
 ### Extra parameters (deploy-ext.inc.php)
 In this file you can place extra parameters definition

@@ -43,12 +43,21 @@ set('nodesByNetwork', function() {
                 $nodesByNetwork[$network][] = $host->get('public_node_ip');
             }
             else {
-                $nodesByNetwork[$network][] = runLocally("php ./vendor/bin/dep phala:get-local-network-ip -q $_hostname");
+                try {
+                    $nodesByNetwork[$network][] = runLocally("{{bin/dep}} phala:get-local-network-ip -q $_hostname");
+                }
+                catch(\Exception $e) {
+
+                }
             }
         }
     }
 
     return $nodesByNetwork;
+});
+
+set('bin/dep', function () {
+    return parse('{{bin/php}} ./vendor/bin/dep');
 });
 
 
@@ -57,11 +66,11 @@ task('phala:configure', function () {
     $target = Context::get()->getHost();
     $hostname = $target->getHostname();
 
-    runLocally("php ./vendor/bin/dep phala:docker:install $hostname", [ 'tty' => true ]);
-    runLocally("php ./vendor/bin/dep phala:driver:install $hostname", [ 'tty' => true ]);
-    runLocally("php ./vendor/bin/dep phala:check_compatibility $hostname", [ 'tty' => true ]);
-    runLocally("php ./vendor/bin/dep phala:deploy $hostname", [ 'tty' => true ]);
-    runLocally("php ./vendor/bin/dep phala:reboot $hostname", [ 'tty' => true ]);
+    runLocally("{{bin/dep}} phala:docker:install $hostname", [ 'tty' => true ]);
+    runLocally("{{bin/dep}} phala:driver:install $hostname", [ 'tty' => true ]);
+    runLocally("{{bin/dep}} phala:check_compatibility $hostname", [ 'tty' => true ]);
+    runLocally("{{bin/dep}} phala:deploy $hostname", [ 'tty' => true ]);
+    runLocally("{{bin/dep}} phala:reboot $hostname", [ 'tty' => true ]);
 });
 
 
@@ -313,7 +322,7 @@ task('phala:deploy', function () {
     writeln('<comment>Genereting scripts (local)</comment>');
 
     foreach ($scripts as $scriptDest => $scriptSrc) {
-        writeln($scriptSrc);
+        writeln("\t" . $scriptSrc);
 
         $templatePath = __DIR__ . '/templates/' . $scriptSrc;
         $scriptPath = __DIR__ . "/build/$hostname/" . $scriptSrc;
@@ -333,7 +342,7 @@ task('phala:deploy', function () {
     }
 
     foreach ($scripts as $scriptDest => $scriptSrc) {
-        writeln($scriptDest);
+        writeln("\t" . $scriptDest);
 
         $localPath = __DIR__ . "/build/$hostname/" . $scriptSrc;
         $remotePath = '{{deploy_path}}/' . $scriptDest;
@@ -366,73 +375,46 @@ task('phala:reboot', function () {
     run('sudo reboot');
 });
 
-desc('Start stack');
-task('phala:start', function () {
+desc('Refresh stack');
+task('phala:stack:refresh', function () {
     $target = Context::get()->getHost();
     $hostname = $target->getHostname();
 
-    writeln("<info>Starting ${hostname}</info>");
+    writeln("<info>Refreshing ${hostname} stack</info>");
 
-    $isMainScriptWorking = test('[[ `pgrep {{deploy_path}}/main.sh` != "" ]]');
-    if ($isMainScriptWorking) {
-        run('kill -s 9 $(pgrep {{deploy_path}}/main.sh)');
-    }
-
-    try {
-        run('nohup {{deploy_path}}/main.sh start stack 1 &', [ 'timeout' => 1 ]);
-    }
-    catch(ProcessTimedOutException $e) {}
-});
-
-desc('Stop stack');
-task('phala:stop', function () {
-    $target = Context::get()->getHost();
-    $withNode = $target->get('use_as_node');
-
-    $isMainScriptWorking = test('[[ `pgrep {{deploy_path}}/main.sh` != "" ]]');
-    if ($isMainScriptWorking) {
-        run('kill -s 9 $(pgrep {{deploy_path}}/main.sh)');
-    }
-
-    run('docker stop phala-phost || true');
-    run('docker stop phala-pruntime || true');
-    if ($withNode) {
-        run('docker stop phala-node || true');
-    }
+    runLocally("{{bin/dep}} phala:deploy $hostname", [ 'tty' => true ]);
+    runLocally("{{bin/dep}} phala:stack:restart $hostname", [ 'tty' => true ]);
+    runLocally("{{bin/dep}} phala:stats:restart $hostname", [ 'tty' => true ]);
 });
 
 desc('Restart host');
-task('phala:restart', function () {
-    $isMainScriptWorking = test('[[ `pgrep {{deploy_path}}/main.sh` != "" ]]');
-    if ($isMainScriptWorking) {
-        run('kill -s 9 $(pgrep {{deploy_path}}/main.sh)');
+task('phala:stack:restart', function () {
+    if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
+        run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
     }
 
     run('docker stop phala-phost || true');
-
-    try {
-        run('nohup {{deploy_path}}/main.sh start stack 1 &', [ 'timeout' => 1 ]);
-    }
-    catch(ProcessTimedOutException $e) {}
+    run("nohup {{deploy_path}}/main.sh start stack 1 > /dev/null 2>&1 &");
 });
 
 
 desc('Upgrade docker containers');
-task('phala:upgrade', function () {
+task('phala:stack:upgrade', function () {
     $target = Context::get()->getHost();
     $withNode = $target->get('use_as_node');
 
-    $isMainScriptWorking = test('[[ `pgrep {{deploy_path}}/main.sh` != "" ]]');
-    if ($isMainScriptWorking) {
-        run('kill -s 9 $(pgrep {{deploy_path}}/main.sh)');
+    if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
+        run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
     }
 
+    // stop dockers
     if ($withNode) {
         run('docker stop phala-phost || true');
     }
     run('docker stop phala-pruntime || true');
     run('docker stop phala-node || true');
 
+    // pull again
     if ($withNode) {
         run('docker pull phalanetwork/phala-poc3-node', [ 'tty' => true ]);
     }
@@ -441,19 +423,15 @@ task('phala:upgrade', function () {
 });
 
 
-task('phala:stats:start', function () {
+task('phala:stats:restart', function () {
     $target = Context::get()->getHost();
     $hostname = $target->getHostname();
 
     writeln("<info>Stats start for ${hostname}</info>");
 
-    try {
-        run('ps aux | grep "{{deploy_path}}/main.sh start stats" | grep -v "grep" | awk \'{print $2}\' | xargs kill');
+    if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stats' | grep -v 'grep'` != '' ]]")) {
+        run("ps aux | grep '{{deploy_path}}/main.sh start stats' | grep -v 'grep' | awk '{print $2}' | xargs kill");
     }
-    catch(RuntimeException $e) {}
 
-    try {
-        run('nohup {{deploy_path}}/main.sh start stats &', [ 'timeout' => 1 ]);
-    }
-    catch(ProcessTimedOutException $e) {}
+    run('nohup {{deploy_path}}/main.sh start stats > /dev/null 2>&1 &', [ 'timeout' => 1 ]);
 });
