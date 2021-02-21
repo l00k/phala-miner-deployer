@@ -408,9 +408,7 @@ task('phala:stack:upgrade', function () {
     }
 
     // stop dockers
-    if ($withNode) {
-        run('docker stop phala-phost || true');
-    }
+    run('docker stop phala-phost || true');
     run('docker stop phala-pruntime || true');
     run('docker stop phala-node || true');
 
@@ -420,6 +418,72 @@ task('phala:stack:upgrade', function () {
     }
     run('docker pull phalanetwork/phala-poc3-pruntime', [ 'tty' => true ]);
     run('docker pull phalanetwork/phala-poc3-phost', [ 'tty' => true ]);
+
+    run("nohup {{deploy_path}}/main.sh start stack 1 > /dev/null 2>&1 &");
+});
+
+
+desc('Create stack database backup');
+task('phala:db:backup', function () {
+    if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
+        run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
+    }
+
+    // stop dockers
+    run('docker stop phala-phost || true');
+    run('docker stop phala-pruntime || true');
+    run('docker stop phala-node || true');
+
+    // create backup
+    if (test('[[ -e {{deploy_path}}/phala-node-data ]]')) {
+        run("
+            cd {{deploy_path}}
+            [[ -e phala-node-data-bak ]] && rm -r phala-node-data-bak
+            cp -r phala-node-data phala-node-data-bak
+        ", [ 'timeout' => 0 ]);
+    }
+
+    if (test('[[ -e {{deploy_path}}/phala-pruntime-data ]]')) {
+        run("
+            cd {{deploy_path}}
+            [[ -e phala-pruntime-data-bak ]] && rm -r phala-pruntime-data-bak
+            cp -r phala-pruntime-data phala-pruntime-data-bak
+        ", [ 'timeout' => 0 ]);
+    }
+
+    run("nohup {{deploy_path}}/main.sh start stack 1 > /dev/null 2>&1 &");
+});
+
+
+desc('Restore stack datatbase from backup');
+task('phala:db:restore', function () {
+    if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
+        run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
+    }
+
+    // stop dockers
+    run('docker stop phala-phost || true');
+    run('docker stop phala-pruntime || true');
+    run('docker stop phala-node || true');
+
+    // create backup
+    if (test('[[ -e {{deploy_path}}/phala-node-data-bak ]]')) {
+        run("
+            cd {{deploy_path}}
+            [[ -e phala-node-data ]] && rm -r phala-node-data
+            cp -r phala-node-data-bak phala-node-data
+        ");
+    }
+
+    if (test('[[ -e {{deploy_path}}/phala-pruntime-data-bak ]]')) {
+        run("
+            cd {{deploy_path}}
+            [[ -e phala-pruntime-data ]] && rm -r phala-pruntime-data
+            cp -r phala-pruntime-data-bak phala-pruntime-data
+        ");
+    }
+
+    run("nohup {{deploy_path}}/main.sh start stack 1 > /dev/null 2>&1 &");
 });
 
 
