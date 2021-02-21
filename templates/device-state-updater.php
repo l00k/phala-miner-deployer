@@ -127,4 +127,4 @@ $payloadJson = gqlFormatPayload($payload);
 
 $gqlMutation = addslashes("mutation { updateMinerDeviceInfo ($payloadJson) { updatedAt } }");
 
-`curl -s -X POST -H "Content-Type: application/json" --data '{"variables":{},"query":"$gqlMutation"}' https://phala-miner-monitor2.100k.dev:8084/graphql`;
+`curl -X POST -H "Content-Type: application/json" --data '{"variables":{},"query":"$gqlMutation"}' https://phala-miner-monitor2.100k.dev:8084/graphql`;
