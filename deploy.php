@@ -499,3 +499,28 @@ task('phala:stats:restart', function () {
 
     run('nohup {{deploy_path}}/main.sh start stats > /dev/null 2>&1 &', [ 'timeout' => 1 ]);
 });
+
+
+task('phala:purge', function () {
+    $target = Context::get()->getHost();
+    $hostname = $target->getHostname();
+
+    writeln("<info>Purge for ${hostname}</info>");
+
+    if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
+        run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
+    }
+
+    if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stats' | grep -v 'grep'` != '' ]]")) {
+        run("ps aux | grep '{{deploy_path}}/main.sh start stats' | grep -v 'grep' | awk '{print $2}' | xargs kill");
+    }
+
+    run('docker stop phala-phost || true');
+    run('docker stop phala-pruntime || true');
+    run('docker stop phala-node || true');
+    run('docker rmi -f $(docker images -a -q)');
+    run('rm -rf /root/phala');
+    run('update-rc.d phala-stack remove');
+    run('rm /etc/init.d/phala-stack || true');
+    run('rm /etc/rc*.d/*phala-stack || true');
+});
