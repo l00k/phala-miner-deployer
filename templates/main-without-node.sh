@@ -20,7 +20,7 @@ start_runtime() {
         -p 8000:8000 \
         -v {{deploy_path}}/phala-pruntime-data:/root/data \
         {{pruntime_devices}} \
-        phalanetwork/phala-poc3-pruntime
+        phalanetwork/phala-poc4-pruntime
 
     # wait for pruntime init
     sleep 10
@@ -61,7 +61,7 @@ start_host() {
                 -e MNEMONIC="{{miner_mnemonic}}" \
                 -e EXTRA_OPTS="-r" \
                 --link phala-pruntime \
-                phalanetwork/phala-poc3-phost
+                phalanetwork/phala-poc4-phost
 
             sleep 15
 

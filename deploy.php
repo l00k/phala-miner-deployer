@@ -414,10 +414,10 @@ task('phala:stack:upgrade', function () {
 
     // pull again
     if ($withNode) {
-        run('docker pull phalanetwork/phala-poc3-node', [ 'tty' => true ]);
+        run('docker pull phalanetwork/phala-poc4-node', [ 'tty' => true ]);
     }
-    run('docker pull phalanetwork/phala-poc3-pruntime', [ 'tty' => true ]);
-    run('docker pull phalanetwork/phala-poc3-phost', [ 'tty' => true ]);
+    run('docker pull phalanetwork/phala-poc4-pruntime', [ 'tty' => true ]);
+    run('docker pull phalanetwork/phala-poc4-phost', [ 'tty' => true ]);
 
     run("nohup {{deploy_path}}/main.sh start stack 1 > /dev/null 2>&1 &");
 });
@@ -471,16 +471,16 @@ task('phala:db:restore', function () {
         run("
             cd {{deploy_path}}
             [[ -e phala-node-data ]] && rm -r phala-node-data
-            cp -r phala-node-data-bak phala-node-data
-        ");
+            rsync -aHAX --progress phala-node-data-bak phala-node-data
+        ", [ 'timeout' => 0, 'tty' => true ]);
     }
 
     if (test('[[ -e {{deploy_path}}/phala-pruntime-data-bak ]]')) {
         run("
             cd {{deploy_path}}
             [[ -e phala-pruntime-data ]] && rm -r phala-pruntime-data
-            cp -r phala-pruntime-data-bak phala-pruntime-data
-        ");
+            rsync -aHAX --progress phala-pruntime-data-bak phala-pruntime-data
+        ", [ 'timeout' => 0, 'tty' => true ]);
     }
 
     run("nohup {{deploy_path}}/main.sh start stack 1 > /dev/null 2>&1 &");
