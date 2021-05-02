@@ -398,6 +398,17 @@ task('phala:stack:restart', function () {
     run("nohup {{deploy_path}}/main.sh start stack 1 > /dev/null 2>&1 &");
 });
 
+desc('Stop stack');
+task('phala:stack:stop', function () {
+    if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
+        run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
+    }
+
+    run('docker stop phala-phost || true');
+    run('docker stop phala-pruntime || true');
+    run('docker stop phala-node || true');
+});
+
 
 desc('Upgrade docker containers');
 task('phala:stack:upgrade', function () {
