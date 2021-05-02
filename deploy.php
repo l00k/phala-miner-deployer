@@ -520,7 +520,7 @@ task('phala:purge', function () {
     run('docker stop phala-node || true');
     run('docker rmi -f $(docker images -a -q)');
     run('rm -rf {{deploy_path}}');
-    run('update-rc.d phala-stack remove');
-    run('rm /etc/init.d/phala-stack || true');
-    run('rm /etc/rc*.d/*phala-stack || true');
+    run('update-rc.d {{service_name}} remove');
+    run('rm /etc/init.d/{{service_name}} || true');
+    run('rm /etc/rc*.d/*{{service_name}} || true');
 });
