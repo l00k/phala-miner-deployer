@@ -2,9 +2,7 @@
 
 namespace Deployer;
 
-use Deployer\Exception\RuntimeException;
 use Deployer\Task\Context;
-use Symfony\Component\Process\Exception\ProcessTimedOutException;
 
 require 'recipe/common.php';
 
@@ -44,7 +42,10 @@ set('nodesByNetwork', function() {
             }
             else {
                 try {
-                    $nodesByNetwork[$network][] = runLocally("{{bin/dep}} phala:get-local-network-ip -q $_hostname");
+                    $ip = runLocally("{{bin/dep}} phala:get-local-network-ip -q $_hostname");
+                    writeln("$_hostname\t$ip");
+
+                    $nodesByNetwork[$network][] = $ip;
                 }
                 catch(\Exception $e) {
 
