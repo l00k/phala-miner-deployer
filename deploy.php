@@ -519,7 +519,7 @@ task('phala:purge', function () {
     run('docker stop phala-pruntime || true');
     run('docker stop phala-node || true');
     run('docker rmi -f $(docker images -a -q)');
-    run('rm -rf /root/phala');
+    run('rm -rf {{deploy_path}}');
     run('update-rc.d phala-stack remove');
     run('rm /etc/init.d/phala-stack || true');
     run('rm /etc/rc*.d/*phala-stack || true');
