@@ -48,13 +48,13 @@ function gqlFormatPayload($data, $level = 0)
 
 // fetch cpu temperature
 $_types = explode(PHP_EOL, `cat /sys/class/thermal/thermal_zone*/type`);
-$_temps = explode(PHP_EOL, `cat /sys/class/thermal/thermal_zone*/temp`);
+$_temps = explode(PHP_EOL, `cat /sys/class/thermal/thermal_zone*/temp 2>&1`);
 
 $temps = array_combine(
     array_filter($_types),
     array_map(
         function ($e) {
-            return $e * 0.001;
+            return (int) $e * 0.001;
         },
         array_filter($_temps)
     )
