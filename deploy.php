@@ -134,7 +134,7 @@ task('driver:install', function () {
     writeln('Installing DCAP driver');
 
     run('
-        wget https://download.01.org/intel-sgx/sgx-dcap/1.9/linux/distro/ubuntu20.04-server/sgx_linux_x64_driver_1.36.2.bin;
+        wget https://download.01.org/intel-sgx/sgx-dcap/1.10.3/linux/distro/ubuntu20.04-server/sgx_linux_x64_driver_1.41.bin;
         chmod +x sgx_linux_x64_driver_1.36.2.bin;
         sudo ./sgx_linux_x64_driver_1.36.2.bin;
         rm sgx_linux_x64_driver_1.36.2.bin;
@@ -154,7 +154,7 @@ task('driver:install', function () {
     writeln('Installing SGX driver');
 
     run('
-        wget https://download.01.org/intel-sgx/sgx-linux/2.12/distro/ubuntu20.04-server/sgx_linux_x64_driver_2.11.0_4505f07.bin;
+        wget https://download.01.org/intel-sgx/sgx-linux/2.13.3/distro/ubuntu20.04-server/sgx_linux_x64_driver_2.11.0_2d2b795.bin;
         chmod +x sgx_linux_x64_driver_2.11.0_4505f07.bin;
         sudo ./sgx_linux_x64_driver_2.11.0_4505f07.bin;
         rm sgx_linux_x64_driver_2.11.0_4505f07.bin;
