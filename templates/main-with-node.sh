@@ -18,7 +18,9 @@ start_node() {
     sudo docker run -dit --rm \
         --name phala-node \
         -e NODE_NAME="{{node_name}}" \
-        -p 9933:9933 -p 9944:9944 -p 30333:30333 \
+        -p {{ports_0}}:{{ports_0}} \
+        -p {{ports_1}}:{{ports_1}} \
+        -p {{ports_2}}:{{ports_2}} \
         -v {{deploy_path}}/phala-node-data:/root/data \
         phalanetwork/phala-poc4-node
 }
@@ -46,38 +48,45 @@ start_host() {
         return
     fi
 
-    NODES=("phala-node")
-    NODES+=({{node_ips}})
+    NODES+=({{nodes}})
     DONE=0
 
     for NODE in "${NODES[@]}"; do
-        PUBLIC_ADDRESS=$NODE
+        NODE_PARTS=(${NODE//:/ })
+
+        NODE_HOST=${NODE_PARTS[0]}
+        NODE_PORT_WS=${NODE_PARTS[1]}
+        NODE_PORT_RPC=${NODE_PARTS[2]}
+
+        PUBLIC_HOST=$NODE_HOST
         if [[ $NODE == "phala-node" ]]; then
-            PUBLIC_ADDRESS="localhost"
+            PUBLIC_HOST="localhost"
         fi
 
-        echo "Checking $NODE / $PUBLIC_ADDRESS"
+        echo "Checking $NODE_HOST / $PUBLIC_HOST"
 
-        STATUS=$(echo 'exit' | telnet $PUBLIC_ADDRESS 9944 | grep "Connected to")
+        STATUS=$(echo 'exit' | telnet $PUBLIC_HOST $NODE_PORT_RPC | grep "Connected to")
         if [[ $STATUS == '' ]]; then
             echo "Websocket is down!"
+            echo "Discard"
             continue
         fi
 
-        STATUS=$(curl -s -H "Content-Type: application/json" --data '{ "jsonrpc":"2.0", "method": "system_health", "params":[], "id":1 }' $PUBLIC_ADDRESS:9933 | grep '"isSyncing":true')
+        STATUS=$(curl -s -H "Content-Type: application/json" --data '{ "jsonrpc":"2.0", "method": "system_health", "params":[], "id":1 }' $PUBLIC_HOST:$NODE_PORT_RPC | grep '"isSyncing":true')
         if [[ $STATUS != '' ]]; then
             echo "Node is syncing!"
+            echo "Discard"
             continue
         fi
 
         for TRY in {1..3}; do
-            echo "Connecting to $NODE / $PUBLIC_ADDRESS (try $TRY)"
+            echo "Connecting to $NODE_HOST / $PUBLIC_HOST (try $TRY)"
 
             # start host
             sudo docker run -d -ti --rm \
                 --name phala-phost \
                 -e PRUNTIME_ENDPOINT="http://phala-pruntime:8000" \
-                -e PHALA_NODE_WS_ENDPOINT="ws://$NODE:9944" \
+                -e PHALA_NODE_WS_ENDPOINT="ws://$NODE_HOST:$NODE_PORT_WS" \
                 -e MNEMONIC="{{miner_mnemonic}}" \
                 -e EXTRA_OPTS="-r" \
                 --link phala-node \

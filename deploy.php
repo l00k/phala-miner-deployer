@@ -19,6 +19,12 @@ set('use_as_node', false);
 inventory('nodes.yml');
 
 
+// utils
+set('bin/dep', function () {
+    return parse('{{bin/php}} ./vendor/bin/dep');
+});
+
+
 $deployExtPath = __DIR__ . '/deploy-ext.inc.php';
 if (file_exists($deployExtPath)) {
     require($deployExtPath);
@@ -30,23 +36,29 @@ set('nodesByNetwork', function() {
 
     foreach (Deployer::get()->hosts as $host) {
         $_hostname = $host->getHostname();
-        $network = $host->get('network');
         $useAsNode = (bool) $host->get('use_as_node');
+
         if ($useAsNode) {
+            $network = $host->get('network', 'main');
+            $nodePorts = $host->get('ports');
+
             if (!isset($nodesByNetwork[$network])) {
                 $nodesByNetwork[$network] = [];
             }
 
+            $nodeIp = null;
             if ($host->get('public_node_ip', false)) {
-                $nodesByNetwork[$network][] = $host->get('public_node_ip');
+                $nodeIp = $host->get('public_node_ip');
             }
             else {
                 try {
-                    $nodesByNetwork[$network][] = runLocally("{{bin/dep}} phala:get-local-network-ip -q $_hostname");
+                    $nodeIp = runLocally("{{bin/dep}} get-local-network-ip -q $_hostname");
                 }
-                catch(\Exception $e) {
+                catch(\Exception $e) {}
+            }
 
-                }
+            if ($nodeIp) {
+                $nodesByNetwork[$network][] = implode(':', [ $nodeIp, $nodePorts[0], $nodePorts[1] ]);
             }
         }
     }
@@ -54,34 +66,13 @@ set('nodesByNetwork', function() {
     return $nodesByNetwork;
 });
 
-set('bin/dep', function () {
-    return parse('{{bin/php}} ./vendor/bin/dep');
-});
-
-
-desc('Configure entire stack');
-task('phala:configure', function () {
-    $target = Context::get()->getHost();
-    $hostname = $target->getHostname();
-
-    runLocally("{{bin/dep}} phala:docker:install $hostname", [ 'tty' => true ]);
-    runLocally("{{bin/dep}} phala:driver:install $hostname", [ 'tty' => true ]);
-    runLocally("{{bin/dep}} phala:check_compatibility $hostname", [ 'tty' => true ]);
-    runLocally("{{bin/dep}} phala:deploy $hostname", [ 'tty' => true ]);
-    runLocally("{{bin/dep}} phala:reboot $hostname", [ 'tty' => true ]);
-});
-
-
-desc('Install old docker (if necessary)');
-task('phala:docker:uninstall', function () {
+desc('Reinstall docker');
+task('docker:reinstall', function () {
     run('
         sudo apt update && sudo apt upgrade -y && sudo apt autoremove -y;
         sudo apt-get remove docker docker-engine docker.io containerd runc;
     ', [ 'tty' => true ]);
-});
 
-desc('Install docker');
-task('phala:docker:install', function () {
     run('
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -;
         sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable";
@@ -90,7 +81,7 @@ task('phala:docker:install', function () {
 });
 
 desc('Enable SGX (if software controlled)');
-task('phala:sgx_enable', function () {
+task('sgx_enable', function () {
     run('
         wget https://github.com/Phala-Network/sgx-tools/releases/download/0.1/sgx_enable;
         chmod +x sgx_enable;
@@ -100,7 +91,7 @@ task('phala:sgx_enable', function () {
 });
 
 desc('Check SGX driver');
-task('phala:driver:check', function () {
+task('driver:check', function () {
     $isInstalled = test('[[ -e /dev/sgx ]]');
     if ($isInstalled) {
         writeln('<comment>DCAP driver is installed</comment>');
@@ -117,7 +108,7 @@ task('phala:driver:check', function () {
 });
 
 desc('Install SGX driver');
-task('phala:driver:install', function () {
+task('driver:install', function () {
     $isInstalled = test('[[ -e /dev/sgx ]]');
     if ($isInstalled) {
         writeln('<comment>DCAP driver is already installed</comment>');
@@ -181,7 +172,7 @@ task('phala:driver:install', function () {
 });
 
 desc('Check Phala miner compatibility');
-task('phala:check_compatibility', function () {
+task('check_compatibility', function () {
     $usingDcapDriver = test('[[ -e /dev/sgx ]]');
     $usingSgxDriver = test('[[ -e /dev/isgx ]]');
 
@@ -243,7 +234,7 @@ task('phala:check_compatibility', function () {
 });
 
 desc('Deploy stack');
-task('phala:deploy', function () {
+task('deploy', function () {
     $target = Context::get()->getHost();
 
     // setup node name
@@ -360,12 +351,12 @@ task('phala:deploy', function () {
 });
 
 desc('Get local network IP');
-task('phala:get-local-network-ip', function () {
+task('get-local-network-ip', function () {
     echo run("hostname -I | awk '{print $1}'");
 });
 
 desc('Reboot device');
-task('phala:reboot', function () {
+task('reboot', function () {
     $target = Context::get()->getHost();
     $hostname = $target->getHostname();
 
@@ -374,19 +365,19 @@ task('phala:reboot', function () {
 });
 
 desc('Refresh stack');
-task('phala:stack:refresh', function () {
+task('stack:refresh', function () {
     $target = Context::get()->getHost();
     $hostname = $target->getHostname();
 
     writeln("<info>Refreshing ${hostname} stack</info>");
 
-    runLocally("{{bin/dep}} phala:deploy $hostname", [ 'tty' => true ]);
-    runLocally("{{bin/dep}} phala:stack:restart $hostname", [ 'tty' => true ]);
-    runLocally("{{bin/dep}} phala:stats:restart $hostname", [ 'tty' => true ]);
+    runLocally("{{bin/dep}} deploy $hostname", [ 'tty' => true ]);
+    runLocally("{{bin/dep}} stack:restart $hostname", [ 'tty' => true ]);
+    runLocally("{{bin/dep}} stats:restart $hostname", [ 'tty' => true ]);
 });
 
 desc('Restart host');
-task('phala:stack:restart', function () {
+task('stack:restart', function () {
     if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
         run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
     }
@@ -396,7 +387,7 @@ task('phala:stack:restart', function () {
 });
 
 desc('Stop stack');
-task('phala:stack:stop', function () {
+task('stack:stop', function () {
     if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
         run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
     }
@@ -408,7 +399,7 @@ task('phala:stack:stop', function () {
 
 
 desc('Upgrade docker containers');
-task('phala:stack:upgrade', function () {
+task('stack:upgrade', function () {
     $target = Context::get()->getHost();
     $withNode = $target->get('use_as_node');
 
@@ -433,7 +424,7 @@ task('phala:stack:upgrade', function () {
 
 
 desc('Create stack database backup');
-task('phala:db:backup', function () {
+task('db:backup', function () {
     if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
         run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
     }
@@ -465,7 +456,7 @@ task('phala:db:backup', function () {
 
 
 desc('Restore stack datatbase from backup');
-task('phala:db:restore', function () {
+task('db:restore', function () {
     if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
         run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
     }
@@ -496,7 +487,7 @@ task('phala:db:restore', function () {
 });
 
 
-task('phala:stats:restart', function () {
+task('stats:restart', function () {
     $target = Context::get()->getHost();
     $hostname = $target->getHostname();
 
@@ -510,7 +501,7 @@ task('phala:stats:restart', function () {
 });
 
 
-task('phala:purge', function () {
+task('purge', function () {
     $target = Context::get()->getHost();
     $hostname = $target->getHostname();
 

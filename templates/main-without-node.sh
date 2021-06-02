@@ -36,30 +36,44 @@ start_host() {
     DONE=0
 
     for NODE in "${NODES[@]}"; do
-        echo "Checking $NODE"
+        NODE_PARTS=(${NODE//:/ })
 
-        STATUS=$(echo 'exit' | telnet $NODE 9944 | grep "Connected to")
+        NODE_HOST=${NODE_PARTS[0]}
+        NODE_PORT_WS=${NODE_PARTS[1]}
+        NODE_PORT_RPC=${NODE_PARTS[2]}
+
+        PUBLIC_HOST=$NODE_HOST
+        if [[ $NODE == "phala-node" ]]; then
+            PUBLIC_HOST="localhost"
+        fi
+
+        echo "Checking $NODE_HOST / $PUBLIC_HOST"
+
+        STATUS=$(echo 'exit' | telnet $PUBLIC_HOST $NODE_PORT_RPC | grep "Connected to")
         if [[ $STATUS == '' ]]; then
             echo "Websocket is down!"
+            echo "Discard"
             continue
         fi
 
-        STATUS=$(curl -s -H "Content-Type: application/json" --data '{ "jsonrpc":"2.0", "method": "system_health", "params":[], "id":1 }' $NODE:9933 | grep '"isSyncing":true')
+        STATUS=$(curl -s -H "Content-Type: application/json" --data '{ "jsonrpc":"2.0", "method": "system_health", "params":[], "id":1 }' $PUBLIC_HOST:$NODE_PORT_RPC | grep '"isSyncing":true')
         if [[ $STATUS != '' ]]; then
             echo "Node is syncing!"
+            echo "Discard"
             continue
         fi
 
         for TRY in {1..3}; do
-            echo "Connecting to $NODE (try $TRY)"
+            echo "Connecting to $NODE_HOST / $PUBLIC_HOST (try $TRY)"
 
             # start host
             sudo docker run -d -ti --rm \
                 --name phala-phost \
                 -e PRUNTIME_ENDPOINT="http://phala-pruntime:8000" \
-                -e PHALA_NODE_WS_ENDPOINT="ws://$NODE:9944" \
+                -e PHALA_NODE_WS_ENDPOINT="ws://$NODE_HOST:$NODE_PORT_WS" \
                 -e MNEMONIC="{{miner_mnemonic}}" \
                 -e EXTRA_OPTS="-r" \
+                --link phala-node \
                 --link phala-pruntime \
                 phalanetwork/phala-poc4-phost
 

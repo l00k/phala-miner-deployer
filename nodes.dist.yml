@@ -1,8 +1,33 @@
-my-nice-miner:
+miner-01:
     hostname: 123.45.67.89
     port: 22
     user: root
     stage: 'miner'
     deploy_path: '/root/phala'
-    node_name: 'my-nice-miner'
+    node_name: 'my-miner-01'
     miner_mnemonic: 'secret words here secret words here secret words here secret words here'
+    use_as_node: true
+    ports: [ 9933, 9944, 30333 ]
+    network: 'my-local-network'
+
+miner-02:
+    hostname: 123.45.67.211
+    port: 22
+    user: root
+    stage: 'miner'
+    deploy_path: '/root/phala'
+    node_name: 'my-miner-02'
+    miner_mnemonic: 'secret words here secret words here secret words here secret words here'
+    network: 'my-local-network'
+
+miner-03:
+    hostname: 123.45.67.211
+    port: 22
+    user: root
+    stage: 'miner'
+    deploy_path: '/root/phala'
+    node_name: 'my-miner-03'
+    miner_mnemonic: 'secret words here secret words here secret words here secret words here'
+    use_as_node: true
+    ports: [ 121, 122, 123 ]
+    network: 'external-network'
