@@ -32,7 +32,7 @@ start_host() {
         return
     fi
 
-    NODES=({{node_ips}})
+    NODES=({{nodes}})
     DONE=0
 
     for NODE in "${NODES[@]}"; do
@@ -43,9 +43,6 @@ start_host() {
         NODE_PORT_RPC=${NODE_PARTS[2]}
 
         PUBLIC_HOST=$NODE_HOST
-        if [[ $NODE == "phala-node" ]]; then
-            PUBLIC_HOST="localhost"
-        fi
 
         echo "Checking $NODE_HOST / $PUBLIC_HOST"
 

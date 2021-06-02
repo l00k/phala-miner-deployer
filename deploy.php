@@ -34,13 +34,17 @@ if (file_exists($deployExtPath)) {
 set('nodesByNetwork', function() {
     $nodesByNetwork = [];
 
+    writeln('Fetching node IPs');
+
     foreach (Deployer::get()->hosts as $host) {
         $_hostname = $host->getHostname();
         $useAsNode = (bool) $host->get('use_as_node');
 
         if ($useAsNode) {
+            write('.');
+
             $network = $host->get('network', 'main');
-            $nodePorts = $host->get('ports');
+            $nodePorts = $host->getConfig()->get('ports');
 
             if (!isset($nodesByNetwork[$network])) {
                 $nodesByNetwork[$network] = [];
@@ -62,6 +66,8 @@ set('nodesByNetwork', function() {
             }
         }
     }
+
+    writeln('');
 
     return $nodesByNetwork;
 });
@@ -245,22 +251,28 @@ task('deploy', function () {
     }
 
     $hostname = $target->getHostname();
-    $withNode = $target->get('use_as_node');
-    $withNodeText = $withNode
+    $useAsNode = $target->get('use_as_node');
+    $useAsNodeText = $useAsNode
         ? 'with node'
         : 'without node';
 
-    writeln("<info>Deploying to ${hostname} (${withNodeText})</info>");
+    writeln("<info>Deploying to ${hostname} (${useAsNodeText})</info>");
 
     $scripts = [
         'rc-script.sh' => 'rc-script.sh',
-        'main.sh' => $withNode ? 'main-with-node.sh' : 'main-without-node.sh',
+        'main.sh' => $useAsNode ? 'main-with-node.sh' : 'main-without-node.sh',
     ];
 
     $publicDeviceStats = get('public_device_stats', false);
     if ($publicDeviceStats) {
         $scripts['device-state-updater.php'] = 'device-state-updater.php';
     };
+
+    // setup ports
+    $nodePorts = $target->get('ports', []);
+    foreach ($nodePorts as $idx => $nodePort) {
+        set("ports_$idx", $nodePort);
+    }
 
     // collect all nodes ips
     $nodes = [];
@@ -269,13 +281,21 @@ task('deploy', function () {
         $nodes[] = $target->get('force_node_ip');
     }
     else {
+        if ($useAsNode) {
+            $nodes[] = "phala-node:$nodePorts[0]:$nodePorts[1]";
+        }
+
         $nodesByNetwork = get('nodesByNetwork');
         $network = $target->get('network');
-        $nodes = $nodesByNetwork[$network];
+
+        $nodes = array_merge(
+            $nodes,
+            $nodesByNetwork[$network]
+        );
     }
 
     $nodeIpsRaw = '"' . join('" "', $nodes) . '"';
-    set('node_ips', $nodeIpsRaw);
+    set('nodes', $nodeIpsRaw);
 
     // get device
     $dockerDevices = '';

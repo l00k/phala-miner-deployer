@@ -48,7 +48,7 @@ start_host() {
         return
     fi
 
-    NODES+=({{nodes}})
+    NODES=({{nodes}})
     DONE=0
 
     for NODE in "${NODES[@]}"; do
@@ -59,7 +59,7 @@ start_host() {
         NODE_PORT_RPC=${NODE_PARTS[2]}
 
         PUBLIC_HOST=$NODE_HOST
-        if [[ $NODE == "phala-node" ]]; then
+        if [[ $NODE_HOST == "phala-node" ]]; then
             PUBLIC_HOST="localhost"
         fi
 
