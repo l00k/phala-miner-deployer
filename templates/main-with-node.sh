@@ -18,9 +18,9 @@ start_node() {
     sudo docker run -dit --rm \
         --name phala-node \
         -e NODE_NAME="{{node_name}}" \
-        -p {{ports_0}}:{{ports_0}} \
-        -p {{ports_1}}:{{ports_1}} \
-        -p {{ports_2}}:{{ports_2}} \
+        -p {{ports_0}}:9933 \
+        -p {{ports_1}}:9944 \
+        -p {{ports_2}}:30333 \
         -v {{deploy_path}}/phala-node-data:/root/data \
         phalanetwork/phala-poc4-node
 }
@@ -65,16 +65,28 @@ start_host() {
 
         echo "Checking $NODE_HOST / $PUBLIC_HOST"
 
-        STATUS=$(echo 'exit' | telnet $PUBLIC_HOST $NODE_PORT_RPC | grep "Connected to")
+        # check websocket
+        STATUS=$(echo 'exit' | telnet $PUBLIC_HOST $NODE_PORT_WS | grep "Connected to")
         if [[ $STATUS == '' ]]; then
             echo "Websocket is down!"
             echo "Discard"
             continue
         fi
 
-        STATUS=$(curl -s -H "Content-Type: application/json" --data '{ "jsonrpc":"2.0", "method": "system_health", "params":[], "id":1 }' $PUBLIC_HOST:$NODE_PORT_RPC | grep '"isSyncing":true')
+        # check syncing
+        SYSTEM_HEALTH=$(curl -s -H "Content-Type: application/json" --data '{ "jsonrpc":"2.0", "method": "system_health", "params":[], "id":1 }' $PUBLIC_HOST:$NODE_PORT_WS)
+
+        STATUS=$(echo $SYSTEM_HEALTH | grep '"isSyncing":true')
         if [[ $STATUS != '' ]]; then
             echo "Node is syncing!"
+            echo "Discard"
+            continue
+        fi
+
+        # check peers
+        STATUS=$(echo $SYSTEM_HEALTH | grep '"peers":0')
+        if [[ $STATUS != '' ]]; then
+            echo "Node without peers!"
             echo "Discard"
             continue
         fi
