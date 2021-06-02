@@ -3,7 +3,6 @@
 namespace Deployer;
 
 use Deployer\Task\Context;
-use Exception;
 
 require 'recipe/common.php';
 
@@ -74,7 +73,7 @@ task('docker:reinstall', function () {
     try {
         run('sudo apt-get remove docker docker-engine docker.io containerd runc;', [ 'tty' => true ]);
     }
-    catch (Exception $e) {}
+    catch (\Exception $e) {}
 
     run('
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -;
