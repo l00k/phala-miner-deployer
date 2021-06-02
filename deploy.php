@@ -3,6 +3,7 @@
 namespace Deployer;
 
 use Deployer\Task\Context;
+use Pimple\Tests\Fixtures\Service;
 
 require 'recipe/common.php';
 
@@ -50,18 +51,28 @@ set('nodesByNetwork', function() {
                 $nodesByNetwork[$network] = [];
             }
 
-            $nodeIp = null;
+            $nodeIps = [];
             if ($host->get('public_node_ip', false)) {
-                $nodeIp = $host->get('public_node_ip');
+                $nodeIps[] = $host->get('public_node_ip');
             }
             else {
                 try {
-                    $nodeIp = runLocally("{{bin/dep}} get-local-network-ip -q $_hostname");
+                    $allNodeIpsTxt = runLocally("{{bin/dep}} get-local-network-ip -q $_hostname");
+                    $allNodeIps = explode(' ', $allNodeIpsTxt);
+
+                    // remove 172.* ips
+                    $nodeIps = array_filter(
+                        $allNodeIps,
+                        function($ip) {
+                            $group1 = explode('.', $ip)[0];
+                            return !in_array($group1, [ 172 ]);
+                        }
+                    );
                 }
                 catch(\Exception $e) {}
             }
 
-            if ($nodeIp) {
+            foreach ($nodeIps as $nodeIp) {
                 $nodesByNetwork[$network][] = implode(':', [ $nodeIp, $nodePorts[0], $nodePorts[1] ]);
             }
         }
@@ -374,7 +385,7 @@ task('deploy', function () {
 
 desc('Get local network IP');
 task('get-local-network-ip', function () {
-    echo run("hostname -I | awk '{print $1}'");
+    echo run("hostname -I");
 });
 
 desc('Reboot device');

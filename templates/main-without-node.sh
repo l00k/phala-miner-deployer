@@ -46,7 +46,7 @@ start_host() {
 
         echo "Checking $NODE_HOST / $PUBLIC_HOST"
 
-        STATUS=$(echo 'exit' | telnet $PUBLIC_HOST $NODE_PORT_RPC | grep "Connected to")
+        STATUS=$(echo 'exit' | timeout --signal=9 2 telnet $PUBLIC_HOST $NODE_PORT_RPC | grep "Connected to")
         if [[ $STATUS == '' ]]; then
             echo "Websocket is down!"
             echo "Discard"
