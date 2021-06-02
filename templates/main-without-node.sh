@@ -46,16 +46,28 @@ start_host() {
 
         echo "Checking $NODE_HOST / $PUBLIC_HOST"
 
-        STATUS=$(echo 'exit' | timeout --signal=9 2 telnet $PUBLIC_HOST $NODE_PORT_RPC | grep "Connected to")
+        # check websocket
+        STATUS=$(echo 'exit' | timeout --signal=9 2 telnet $PUBLIC_HOST $NODE_PORT_WS | grep "Connected to")
         if [[ $STATUS == '' ]]; then
             echo "Websocket is down!"
             echo "Discard"
             continue
         fi
 
-        STATUS=$(curl -s -H "Content-Type: application/json" --data '{ "jsonrpc":"2.0", "method": "system_health", "params":[], "id":1 }' $PUBLIC_HOST:$NODE_PORT_RPC | grep '"isSyncing":true')
+        # check syncing
+        SYSTEM_HEALTH=$(curl -s -H "Content-Type: application/json" --data '{ "jsonrpc":"2.0", "method": "system_health", "params":[], "id":1 }' $PUBLIC_HOST:$NODE_PORT_WS)
+
+        STATUS=$(echo $SYSTEM_HEALTH | grep '"isSyncing":true')
         if [[ $STATUS != '' ]]; then
             echo "Node is syncing!"
+            echo "Discard"
+            continue
+        fi
+
+        # check peers
+        STATUS=$(echo $SYSTEM_HEALTH | grep '"peers":0')
+        if [[ $STATUS != '' ]]; then
+            echo "Node without peers!"
             echo "Discard"
             continue
         fi
