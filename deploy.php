@@ -172,7 +172,10 @@ task('driver:install', function () {
         chmod +x sgx_linux_x64_driver_1.41.bin;
         sudo ./sgx_linux_x64_driver_1.41.bin;
         rm sgx_linux_x64_driver_1.41.bin;
-    ');
+    ', [ 'tty' => true ]);
+
+    sleep(1);
+
     $isInstalled = test('[[ -e /dev/sgx ]]');
     $uninstallExists = test('[[ -e /opt/intel/sgxdriver/uninstall.sh ]]');
     if ($isInstalled) {
@@ -192,7 +195,10 @@ task('driver:install', function () {
         chmod +x sgx_linux_x64_driver_2.11.0_2d2b795.bin;
         sudo ./sgx_linux_x64_driver_2.11.0_2d2b795.bin;
         rm sgx_linux_x64_driver_2.11.0_2d2b795.bin;
-    ');
+    ', [ 'tty' => true ]);
+
+    sleep(1);
+
     $isInstalled = test('[[ -e /dev/isgx ]]');
     $uninstallExists = test('[[ -e /opt/intel/sgxdriver/uninstall.sh ]]');
     if ($isInstalled) {
