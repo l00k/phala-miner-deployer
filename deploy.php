@@ -83,6 +83,23 @@ set('nodesByNetwork', function() {
     return $nodesByNetwork;
 });
 
+set('bin/dep', function () {
+    return parse('{{bin/php}} ./vendor/bin/dep');
+});
+
+
+desc('Setup stack');
+task('setup', function () {
+    $target = Context::get()->getHost();
+    $hostname = $target->getHostname();
+
+    runLocally("{{bin/dep}} docker:reinstall $hostname", [ 'tty' => true ]);
+    runLocally("{{bin/dep}} driver:install $hostname", [ 'tty' => true ]);
+    runLocally("{{bin/dep}} check_compatibility $hostname", [ 'tty' => true ]);
+    runLocally("{{bin/dep}} deploy $hostname", [ 'tty' => true ]);
+    runLocally("{{bin/dep}} reboot $hostname", [ 'tty' => true ]);
+});
+
 desc('Reinstall docker');
 task('docker:reinstall', function () {
     run('sudo apt update && sudo apt upgrade -y && sudo apt autoremove -y;', [ 'tty' => true ]);
@@ -152,9 +169,9 @@ task('driver:install', function () {
 
     run('
         wget https://download.01.org/intel-sgx/sgx-dcap/1.10.3/linux/distro/ubuntu20.04-server/sgx_linux_x64_driver_1.41.bin;
-        chmod +x sgx_linux_x64_driver_1.36.2.bin;
-        sudo ./sgx_linux_x64_driver_1.36.2.bin;
-        rm sgx_linux_x64_driver_1.36.2.bin;
+        chmod +x sgx_linux_x64_driver_1.41.bin;
+        sudo ./sgx_linux_x64_driver_1.41.bin;
+        rm sgx_linux_x64_driver_1.41.bin;
     ');
     $isInstalled = test('[[ -e /dev/sgx ]]');
     $uninstallExists = test('[[ -e /opt/intel/sgxdriver/uninstall.sh ]]');
@@ -172,9 +189,9 @@ task('driver:install', function () {
 
     run('
         wget https://download.01.org/intel-sgx/sgx-linux/2.13.3/distro/ubuntu20.04-server/sgx_linux_x64_driver_2.11.0_2d2b795.bin;
-        chmod +x sgx_linux_x64_driver_2.11.0_4505f07.bin;
-        sudo ./sgx_linux_x64_driver_2.11.0_4505f07.bin;
-        rm sgx_linux_x64_driver_2.11.0_4505f07.bin;
+        chmod +x sgx_linux_x64_driver_2.11.0_2d2b795.bin;
+        sudo ./sgx_linux_x64_driver_2.11.0_2d2b795.bin;
+        rm sgx_linux_x64_driver_2.11.0_2d2b795.bin;
     ');
     $isInstalled = test('[[ -e /dev/isgx ]]');
     $uninstallExists = test('[[ -e /opt/intel/sgxdriver/uninstall.sh ]]');
@@ -394,7 +411,10 @@ task('reboot', function () {
     $hostname = $target->getHostname();
 
     writeln("<info>Rebooting ${hostname}</info>");
-    run('sudo reboot');
+    try {
+        run('sudo reboot');
+    }
+    catch(\Exception $e) {}
 });
 
 desc('Refresh stack');
