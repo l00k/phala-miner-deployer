@@ -18,10 +18,10 @@ start_node() {
     sudo docker run -dit --rm \
         --name phala-node \
         -e NODE_NAME="{{node_name}}" \
-        -e EXTRA_OPTS="--host {{ports_2}}" \
+        -e EXTRA_OPTS="--port {{ports_2}}" \
         -p {{ports_0}}:9933 \
         -p {{ports_1}}:9944 \
-        -p {{ports_2}}:30333 \
+        -p {{ports_2}}:{{ports_2}} \
         -v {{deploy_path}}/phala-node-data:/root/data \
         phalanetwork/phala-poc4-node
 }
@@ -49,7 +49,7 @@ start_host() {
         return
     fi
 
-    NODES=({{nodes}})
+    NODES=("phala-node:{{ports_0}}:{{ports_1}}", {{nodes}})
     DONE=0
 
     for NODE in "${NODES[@]}"; do

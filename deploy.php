@@ -315,10 +315,6 @@ task('deploy', function () {
         $nodes[] = $target->get('force_node_ip');
     }
     else {
-        if ($useAsNode) {
-            $nodes[] = "phala-node:$nodePorts[0]:$nodePorts[1]";
-        }
-
         $nodesByNetwork = get('nodesByNetwork');
         $network = $target->get('network');
 
