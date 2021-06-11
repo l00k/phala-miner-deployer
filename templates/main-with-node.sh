@@ -18,6 +18,7 @@ start_node() {
     sudo docker run -dit --rm \
         --name phala-node \
         -e NODE_NAME="{{node_name}}" \
+        -e EXTRA_OPTS="--host {{ports_2}}" \
         -p {{ports_0}}:9933 \
         -p {{ports_1}}:9944 \
         -p {{ports_2}}:30333 \
