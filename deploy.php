@@ -408,7 +408,7 @@ task('deploy', function () {
 
 desc('Get local network IP');
 task('get-local-network-ip', function () {
-    echo run("hostname -I");
+    echo run("hostname -I | awk '{print $1}'");
 });
 
 desc('Reboot device');
