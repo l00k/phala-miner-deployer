@@ -437,7 +437,11 @@ task('stack:restart', function () {
         run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
     }
 
+    // stop dockers
     run('docker stop phala-phost || true');
+    run('docker stop phala-pruntime || true');
+    run('docker stop phala-node || true');
+
     run("nohup {{deploy_path}}/main.sh start stack 1 > /dev/null 2>&1 &");
 });
 
