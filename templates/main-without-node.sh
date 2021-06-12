@@ -39,8 +39,8 @@ start_host() {
         NODE_PARTS=(${NODE//:/ })
 
         NODE_HOST=${NODE_PARTS[0]}
-        NODE_PORT_WS=${NODE_PARTS[1]}
-        NODE_PORT_RPC=${NODE_PARTS[2]}
+        NODE_PORT_RPC=${NODE_PARTS[1]}
+        NODE_PORT_WS=${NODE_PARTS[2]}
 
         PUBLIC_HOST=$NODE_HOST
 
