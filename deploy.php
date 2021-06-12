@@ -463,13 +463,22 @@ task('stack:restart', function () {
         run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
     }
 
-    // stop dockers
     run('docker stop phala-phost || true');
     run('docker stop phala-pruntime || true');
     run('docker stop phala-node || true');
 
     run('cd {{deploy_path}} && rm -r phala-pruntime-data');
 
+    run("nohup {{deploy_path}}/main.sh start stack 1 > /dev/null 2>&1 &");
+});
+
+desc('Restart host soft');
+task('stack:restart:soft', function () {
+    if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
+        run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
+    }
+
+    run('docker stop phala-phost || true');
     run("nohup {{deploy_path}}/main.sh start stack 1 > /dev/null 2>&1 &");
 });
 

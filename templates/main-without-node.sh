@@ -82,7 +82,6 @@ start_host() {
                 -e PHALA_NODE_WS_ENDPOINT="ws://$NODE_HOST:$NODE_PORT_WS" \
                 -e MNEMONIC="{{miner_mnemonic}}" \
                 -e EXTRA_OPTS="-r" \
-                --link phala-node \
                 --link phala-pruntime \
                 phalanetwork/phala-poc4-phost
 
