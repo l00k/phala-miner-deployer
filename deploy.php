@@ -2,8 +2,8 @@
 
 namespace Deployer;
 
+use Deployer\Host\Host;
 use Deployer\Task\Context;
-use Pimple\Tests\Fixtures\Service;
 
 require 'recipe/common.php';
 
@@ -32,12 +32,31 @@ if (file_exists($deployExtPath)) {
 }
 
 
+function getHostIdx(Host $host)
+{
+    $hosts = Deployer::get()->hosts->toArray();
+
+    $idx = 0;
+    foreach ($hosts as $_host) {
+        if ($_host === $host) {
+            break;
+        }
+        ++$idx;
+    }
+
+    return $idx;
+}
+
+
 set('nodesByNetwork', function() {
     $nodesByNetwork = [];
 
     writeln('Fetching node IPs');
 
-    foreach (Deployer::get()->hosts as $host) {
+    $idx = 0;
+
+    $hosts = Deployer::get()->hosts->toArray();
+    foreach ($hosts as $host) {
         $_hostname = $host->getHostname();
         $useAsNode = (bool) $host->get('use_as_node');
 
@@ -45,15 +64,15 @@ set('nodesByNetwork', function() {
             write('.');
 
             $network = $host->get('network', 'main');
-            $nodePorts = $host->getConfig()->get('ports');
+            $nodePorts = $host->getConfig()->get('node_ports');
 
             if (!isset($nodesByNetwork[$network])) {
                 $nodesByNetwork[$network] = [];
             }
 
             $nodeIps = [];
-            if ($host->get('public_node_ip', false)) {
-                $nodeIps[] = $host->get('public_node_ip');
+            if ($host->get('node_ips', false)) {
+                $nodeIps = $host->get('node_ips');
             }
             else {
                 try {
@@ -64,17 +83,20 @@ set('nodesByNetwork', function() {
                     $nodeIps = array_filter(
                         $allNodeIps,
                         function($ip) {
-                            $group1 = explode('.', $ip)[0];
-                            return !in_array($group1, [ 172 ]);
+                            $part1 = explode('.', $ip)[0];
+                            return !in_array($part1, [ 172 ]);
                         }
                     );
                 }
                 catch(\Exception $e) {}
             }
 
+            $nodesByNetwork[$network][$idx] = [];
             foreach ($nodeIps as $nodeIp) {
-                $nodesByNetwork[$network][] = implode(':', [ $nodeIp, $nodePorts[0], $nodePorts[1] ]);
+                $nodesByNetwork[$network][$idx][] = implode(':', [ $nodeIp, $nodePorts[0], $nodePorts[1] ]);
             }
+
+            ++$idx;
         }
     }
 
@@ -278,6 +300,7 @@ task('check_compatibility', function () {
 desc('Deploy stack');
 task('deploy', function () {
     $target = Context::get()->getHost();
+    $targetIdx = getHostIdx($target);
 
     // setup node name
     if (!$target->get('node_name', false)) {
@@ -303,14 +326,12 @@ task('deploy', function () {
     };
 
     // setup ports
-    $nodePorts = $target->get('ports', []);
+    $nodePorts = $target->get('node_ports', []);
     foreach ($nodePorts as $idx => $nodePort) {
         set("ports_$idx", $nodePort);
     }
 
     // collect all nodes ips
-    $nodes = [];
-
     if ($target->get('force_node_ip', false)) {
         $nodes[] = $target->get('force_node_ip');
     }
@@ -318,13 +339,18 @@ task('deploy', function () {
         $nodesByNetwork = get('nodesByNetwork');
         $network = $target->get('network');
 
-        $nodes = array_merge(
-            $nodes,
-            $nodesByNetwork[$network]
-        );
+        $nodes = $nodesByNetwork[$network];
     }
 
-    $nodeIpsRaw = '"' . join('" "', $nodes) . '"';
+    // rotate nodes
+    for ($i=0; $i<$targetIdx; ++$i) {
+        array_push($nodes, array_shift($nodes));
+    }
+
+    // flattern
+    $flatNodes = array_merge(...$nodes);
+
+    $nodeIpsRaw = '"' . join('" "', $flatNodes) . '"';
     set('nodes', $nodeIpsRaw);
 
     // get device
