@@ -445,20 +445,8 @@ task('reboot', function () {
     catch(\Exception $e) {}
 });
 
-desc('Refresh stack');
-task('stack:refresh', function () {
-    $target = Context::get()->getHost();
-    $hostname = $target->getHostname();
-
-    writeln("<info>Refreshing ${hostname} stack</info>");
-
-    runLocally("{{bin/dep}} deploy $hostname", [ 'tty' => true ]);
-    runLocally("{{bin/dep}} stack:restart $hostname", [ 'tty' => true ]);
-    runLocally("{{bin/dep}} stats:restart $hostname", [ 'tty' => true ]);
-});
-
-desc('Restart host');
-task('stack:restart', function () {
+desc('Fully restart host');
+task('stack:restart:full', function () {
     if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
         run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
     }
@@ -481,18 +469,6 @@ task('stack:restart:soft', function () {
     run('docker stop phala-phost || true');
     run("nohup {{deploy_path}}/main.sh start stack 1 > /dev/null 2>&1 &");
 });
-
-desc('Stop stack');
-task('stack:stop', function () {
-    if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
-        run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
-    }
-
-    run('docker stop phala-phost || true');
-    run('docker stop phala-pruntime || true');
-    run('docker stop phala-node || true');
-});
-
 
 desc('Upgrade docker containers');
 task('stack:upgrade', function () {
