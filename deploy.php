@@ -454,7 +454,7 @@ task('stack:restart', function () {
     run('docker stop phala-phost || true');
     run('docker stop phala-pruntime || true');
 
-    run('cd {{deploy_path}} && rm -r phala-pruntime-data');
+    run('cd {{deploy_path}} && rm -r phala-pruntime-data || true');
 
     run("nohup {{deploy_path}}/main.sh start stack 1 > /dev/null 2>&1 &");
 });
