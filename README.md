@@ -42,59 +42,32 @@ https://deployer.org/
 3. Prepare `nodes.yml` configuration file. Check [configuration section](#configuration)  
 4. (optional) `deploy-ext.inc.php` configuration file
 5. Following phala.network tutorial deploy full stack. All following commands can be run per instance or for all (using tag `miner`)  
-`phala:docker:uninstall <tag>` - uninstalls previous docker packages [docs](https://wiki.phala.network/en-us/docs/poc3/1-2-software-configuration/#install-docker-ce)  
-`phala:docker:install <tag>` - installs latest docker packages [docs](https://wiki.phala.network/en-us/docs/poc3/1-2-software-configuration/#install-docker-ce)  
-`phala:sgx_enable <tag>` - enables SGX (if software controlled) [docs](https://wiki.phala.network/en-us/docs/poc3/1-1-hardware-configuration/#bios-settings)  
-`phala:driver:check <tag>` - checks SGX driver [docs](https://wiki.phala.network/en-us/docs/poc3/1-1-hardware-configuration/#sgx-driver-installation)  
-`phala:driver:install <tag>` - installs DCAP / SGX driver (based on support) [docs](https://wiki.phala.network/en-us/docs/poc3/1-1-hardware-configuration/#sgx-driver-installation)  
-`phala:check_compatibility <tag>` - verifies miner compatibility [docs](https://wiki.phala.network/en-us/docs/poc3/1-1-hardware-configuration/#double-check-the-sgx-capability)  
-`phala:deploy <tag>` - deploys 3 scripts (based on templates from `templates/`) and installs system service `phala-stack`  
-`phala:upgrade <tag>` - upgrades stack docker images  
-`phala:restart <tag>` - restarts stack  
+`docker:reinstall <tag>` - uninstalls previous docker packages and installs latest docker packages [docs](https://wiki.phala.network/en-us/docs/poc3/1-2-software-configuration/#install-docker-ce)  
+`sgx_enable <tag>` - enables SGX (if software controlled) [docs](https://wiki.phala.network/en-us/docs/poc3/1-1-hardware-configuration/#bios-settings)  
+`driver:check <tag>` - checks SGX driver [docs](https://wiki.phala.network/en-us/docs/poc3/1-1-hardware-configuration/#sgx-driver-installation)  
+`driver:install <tag>` - installs DCAP / SGX driver (based on support) [docs](https://wiki.phala.network/en-us/docs/poc3/1-1-hardware-configuration/#sgx-driver-installation)  
+`check_compatibility <tag>` - verifies miner compatibility [docs](https://wiki.phala.network/en-us/docs/poc3/1-1-hardware-configuration/#double-check-the-sgx-capability)  
+`deploy <tag>` - deploys 3 scripts (based on templates from `templates/`) and installs system service `phala-stack`  
+`upgrade <tag>` - upgrades stack docker images  
+`stack:restart <tag>` - restarts stack  
   
 For all those commands `<tag>` needs to be replaced with deployer instance name (example `my-nice-miner`) or with `miner` (in order to run command for all instances)  
 
 For my HiveOS rigs it was:
 ```
-php vendor/bin/dep phala:docker:uninstall miner
-php vendor/bin/dep phala:docker:install miner
-php vendor/bin/dep phala:sgx_enable miner
+php vendor/bin/dep docker:reinstall miner
+php vendor/bin/dep sgx_enable miner
 // reboot all instances
-php vendor/bin/dep phala:driver:install miner
-php vendor/bin/dep phala:driver:check miner
-php vendor/bin/dep phala:check_compatibility miner
-php vendor/bin/dep phala:stack:deploy miner
+php vendor/bin/dep driver:install miner
+php vendor/bin/dep driver:check miner
+php vendor/bin/dep check_compatibility miner
+php vendor/bin/dep deploy miner
 ```
 
 ## Configuration
 
 ### Nodes (nodes.yml)
 You can use `nodes.dist.yml` as a template.
-```
-my-nice-miner:
-    hostname: 123.45.67.89
-    port: 22
-    user: root
-    stage: 'miner'
-    deploy_path: '/root/phala'
-    use_as_node: true
-    node_name: 'my-nice-miner'
-    miner_mnemonic: 'secret words here secret words here secret words here secret words here'
-<other node internal name>:
-    public_device_stats: true
-    network: 'network-name'
-    (...)
-```
-`my-nice-miner` - deployer host identifier (make it unique for each node)  
-`<node>.hostname` - IP address of your node  
-`<node>.port` - self explanatory  
-`<node>.user` - root or other user which has access to `sudo` command (without password - google "visudo nopasswd")  
-`<node>.deploy_path` - directory where all scripts and node data will be placed  
-`<node>.use_as_node` - true / false  
-`<node>.node_name` - place name which will be used publically by Phala network to identify your node  
-`<node>.miner_mnemonic` - your controller account mnemonic  
-`<node>.public_device_stats` - should stack stats be submited to monitoring tool?  
-`<node>.network` - network name - all devices in same network will share nodes, node for stach will be selected from network pool  
 
 ### Extra parameters (deploy-ext.inc.php)
 In this file you can place extra parameters definition

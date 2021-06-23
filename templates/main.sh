@@ -9,13 +9,30 @@ if [[ $DELAY == '' ]]; then
     DELAY=60
 fi
 
-start_runtime() {
-    STATUS=$(sudo docker ps | grep "phala-pruntime")
+start_node() {
+    STATUS=$(docker ps | grep "phala-node")
     if [[ $STATUS != '' ]]; then
         return
     fi
 
-    sudo docker run -dit --rm \
+    docker run -dit --rm \
+        --name phala-node \
+        -e NODE_NAME="{{node_config.name}}" \
+        -e EXTRA_OPTS="{{node_config.extra_opts}} --port {{node_config.ports.2}}" \
+        -p {{node_config.ports.0}}:9933 \
+        -p {{node_config.ports.1}}:9944 \
+        -p {{node_config.ports.2}}:{{node_config.ports.2}} \
+        -v {{deploy_path}}/phala-node-data:/root/data \
+        phalanetwork/phala-poc4-node
+}
+
+start_runtime() {
+    STATUS=$(docker ps | grep "phala-pruntime")
+    if [[ $STATUS != '' ]]; then
+        return
+    fi
+
+    docker run -dit --rm \
         --name phala-pruntime \
         -p 8000:8000 \
         -v {{deploy_path}}/phala-pruntime-data:/root/data \
@@ -27,12 +44,17 @@ start_runtime() {
 }
 
 start_host() {
-    STATUS=$(sudo docker ps | grep "phala-phost")
+    STATUS=$(docker ps | grep "phala-phost")
     if [[ $STATUS != '' ]]; then
         return
     fi
 
-    NODES=({{nodes}})
+    if [[ {{run_node}} == 1 ]]; then
+        NODES=("phala-node:{{node_config.ports.0}}:{{node_config.ports.1}}", {{nodes}})
+    else
+        NODES=({{nodes}})
+    fi
+
     DONE=0
 
     for NODE in "${NODES[@]}"; do
@@ -42,7 +64,13 @@ start_host() {
         NODE_PORT_RPC=${NODE_PARTS[1]}
         NODE_PORT_WS=${NODE_PARTS[2]}
 
+        LINKS=""
+
         PUBLIC_HOST=$NODE_HOST
+        if [[ $NODE_HOST == "phala-node" ]]; then
+            LINKS="--link phala-node"
+            PUBLIC_HOST="localhost"
+        fi
 
         echo "Checking $NODE_HOST / $PUBLIC_HOST"
 
@@ -76,18 +104,19 @@ start_host() {
             echo "Connecting to $NODE_HOST / $PUBLIC_HOST (try $TRY)"
 
             # start host
-            sudo docker run -d -ti --rm \
+            docker run -d -ti --rm \
                 --name phala-phost \
                 -e PRUNTIME_ENDPOINT="http://phala-pruntime:8000" \
                 -e PHALA_NODE_WS_ENDPOINT="ws://$NODE_HOST:$NODE_PORT_WS" \
-                -e MNEMONIC="{{miner_mnemonic}}" \
+                -e MNEMONIC="{{miner_config.mnemonic}}" \
                 -e EXTRA_OPTS="-r" \
+                $LINKS \
                 --link phala-pruntime \
                 phalanetwork/phala-poc4-phost
 
             sleep 15
 
-            STATUS=$(sudo docker ps | grep "phala-phost")
+            STATUS=$(docker ps | grep "phala-phost")
             if [[ $STATUS != '' ]]; then
                 echo "It works"
                 DONE=1
@@ -102,20 +131,31 @@ start_host() {
 }
 
 start_watch() {
-     STATUS=$(sudo docker ps | grep "phala-pruntime")
-     if [[ $STATUS == '' ]]; then
-         start_runtime
-         sleep 10
-     fi
+    if [[ {{run_node}} == 1 ]]; then
+        STATUS=$(docker ps | grep "phala-node")
+        if [[ $STATUS == '' ]]; then
+            start_node
+            sleep 10
+        fi
+    fi
 
-     STATUS=$(sudo docker ps | grep "phala-phost")
-     if [[ $STATUS == '' ]]; then
-         start_host
-         sleep 10
-     fi
+    if [[ {{run_miner}} == 1 ]]; then
+        STATUS=$(docker ps | grep "phala-pruntime")
+        if [[ $STATUS == '' ]]; then
+            start_runtime
+            sleep 10
+        fi
+
+        STATUS=$(docker ps | grep "phala-phost")
+        if [[ $STATUS == '' ]]; then
+            start_host
+            sleep 10
+        fi
+    fi
 
     # wait and repeat
     sleep 60
+
     start_watch
 }
 
@@ -123,35 +163,47 @@ start_stats() {
     ./device-state-updater.php
 
     # wait and repeat
-    sleep 60
+    sleep 300
     start_stats
 }
 
 start_stack() {
-    sleep $DELAY
-    start_runtime
-    start_host
+    if [[ {{run_node}} == 1 ]]; then
+        start_node
+    fi
+
+    if [[ {{run_miner}} == 1 ]]; then
+        sleep $DELAY
+
+        start_runtime
+        start_host
+    fi
 
     start_watch &
 }
 
-
 # ##########
 # STOP TASKS
 
-stop_runtime() {
-    sudo docker stop phala-pruntime
-}
-
-stop_host() {
-    sudo docker stop phala-phost
-}
-
 stop_stack() {
-    stop_host
-    stop_runtime
+    if [[ `ps aux | grep 'main.sh start stack' | grep -v 'grep'` != '' ]]; then
+        ps aux | grep 'main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill
+    fi
+
+    if [[ {{run_miner}} == 1 ]]; then
+        docker stop phala-phost
+        docker stop phala-pruntime
+    fi
+    if [[ {{run_node}} == 1 ]]; then
+        docker stop phala-node
+    fi
 }
 
+stop_stats() {
+    if [[ `ps aux | grep 'main.sh start stats' | grep -v 'grep'` != '' ]]; then
+        ps aux | grep 'main.sh start stats' | grep -v 'grep' | awk '{print $2}' | xargs kill
+    fi
+}
 
 # ###########
 # RUN
@@ -174,6 +226,9 @@ stop)
     case "$2" in
     stack)
         stop_stack
+        ;;
+    stats)
+        stop_stats
         ;;
     *)
         exit 1

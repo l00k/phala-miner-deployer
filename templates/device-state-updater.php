@@ -4,8 +4,8 @@
 // ********************
 // Setup your data here
 
-$CONTROLLER_ADDRESS = "{{controller_address}}";
-$SECRET_KEY = "{{secret_key}}";
+$CONTROLLER_ADDRESS = "{{miner_config.controller_address}}";
+$SECRET_KEY = "{{stats_secret_key}}";
 
 // ********************
 

@@ -4,6 +4,7 @@ namespace Deployer;
 
 use Deployer\Host\Host;
 use Deployer\Task\Context;
+use function Deployer\Support\array_flatten;
 
 require 'recipe/common.php';
 
@@ -16,7 +17,21 @@ set('allow_anonymous_stats', false);
 // project configuration
 set('service_name', 'phala-stack');
 set('network', 'main');
-set('use_as_node', false);
+set('encryption_method', 'aes-256-cbc-hmac-sha256');
+set('miner_mnemonic', 'unknown');
+set('controller_address', 'unknown');
+set('run_node', 0);
+set('run_miner', 1);
+set('node_config', [
+    'name' => 'phala-node',
+    'ports' => [ 9933, 9944, 30333 ],
+]);
+set('miner_config', [
+    'mnemonic' => 'unknown',
+    'controller_addres' => 'unknown',
+]);
+set('public_device_stats', 0);
+
 inventory('nodes.yml');
 
 
@@ -47,6 +62,34 @@ function getHostIdx(Host $host)
     return $idx;
 }
 
+function array_flattern_with_path(array $source, $pathPrefix = ''): array
+{
+    $out = [];
+    foreach ($source as $name => $value) {
+        $path = ($pathPrefix ? $pathPrefix . '.' : '') . $name;
+
+        if (is_array($value)) {
+            $children = array_flattern_with_path($value, $path);
+            $out += $children;
+        }
+        else {
+            $out[$path] = $value;
+        }
+    }
+    return $out;
+}
+
+function decrypt_mnemonic(string $method, string $encryptedMnemonic, string $key, string $iv): string
+{
+    return openssl_decrypt(
+        $encryptedMnemonic,
+        $method,
+        $key,
+        0,
+        $iv
+    );
+}
+
 
 set('nodesByNetwork', function() {
     $nodesByNetwork = [];
@@ -58,21 +101,22 @@ set('nodesByNetwork', function() {
     $hosts = Deployer::get()->hosts->toArray();
     foreach ($hosts as $host) {
         $_hostname = $host->getHostname();
-        $useAsNode = (bool) $host->get('use_as_node');
+        $runNode = (bool) $host->get('run_node');
 
-        if ($useAsNode) {
+        if ($runNode) {
             write('.');
 
-            $network = $host->get('network', 'main');
-            $nodePorts = $host->getConfig()->get('node_ports');
+            $network = $host->get('network');
+            $nodeConfig = $host->getConfig()->get('node_config');
+            $nodePorts = $nodeConfig['ports'];
 
             if (!isset($nodesByNetwork[$network])) {
                 $nodesByNetwork[$network] = [];
             }
 
             $nodeIps = [];
-            if ($host->get('node_ips', false)) {
-                $nodeIps = $host->get('node_ips');
+            if (!empty($nodeConfig['ips'])) {
+                $nodeIps = $nodeConfig['ips'];
             }
             else {
                 try {
@@ -108,6 +152,37 @@ set('nodesByNetwork', function() {
 set('bin/dep', function () {
     return parse('{{bin/php}} ./vendor/bin/dep');
 });
+
+
+desc('Encrypt mnemonics');
+task('mnemonic_encrypt', function () {
+    $config = yaml_parse_file('nodes.yml');
+
+    $target = Context::get()->getHost();
+    $encryptionMethod = $target->get('encryption_method');
+    $encryptionKey = $target->get('encryption_key');
+
+    foreach ($config as $hostname => &$hostConfig) {
+        $ivLength = openssl_cipher_iv_length('aes-256-cbc-hmac-sha256');
+        $iv = substr($hostname, 0, $ivLength);
+        $iv = str_pad($iv, $ivLength);
+
+        $hostConfig['miner_config']['encrypted_mnemonic'] = openssl_encrypt(
+            $hostConfig['miner_config']['mnemonic'],
+            $encryptionMethod,
+            $encryptionKey,
+            0,
+            $iv
+        );
+
+        $hostConfig['miner_config'] = [
+            'encrypted_mnemonic' => $hostConfig['miner_config']['encrypted_mnemonic'],
+            'controller_address' => $hostConfig['miner_config']['controller_address'],
+        ];
+    }
+
+    yaml_emit_file('nodes.yml', $config);
+})->local();
 
 
 desc('Setup stack');
@@ -240,19 +315,19 @@ task('check_compatibility', function () {
     $usingDcapDriver = test('[[ -e /dev/sgx ]]');
     $usingSgxDriver = test('[[ -e /dev/isgx ]]');
 
-    run('sudo docker pull phalanetwork/phala-sgx_detect', [ 'tty' => true ]);
+    run('docker pull phalanetwork/phala-sgx_detect', [ 'tty' => true ]);
 
     if ($usingDcapDriver) {
         writeln('<comment>Checking Phala stack compatablity with DCAP driver</comment>');
-        $result = run('sudo docker run --rm --name phala-sgx_detect --device /dev/sgx/enclave --device /dev/sgx/provision phalanetwork/phala-sgx_detect');
+        $result = run('docker run --rm --name phala-sgx_detect --device /dev/sgx/enclave --device /dev/sgx/provision phalanetwork/phala-sgx_detect');
     }
     elseif ($usingSgxDriver) {
         writeln('<comment>Checking Phala stack compatablity with SGX driver</comment>');
-        $result = run('sudo docker run --rm --name phala-sgx_detect --device /dev/isgx phalanetwork/phala-sgx_detect');
+        $result = run('docker run --rm --name phala-sgx_detect --device /dev/isgx phalanetwork/phala-sgx_detect');
     }
     else {
         writeln('<comment>None of drivers installed. Running for diagnose purpose</comment>');
-        $result = run('sudo docker run --rm --name phala-sgx_detect phalanetwork/phala-sgx_detect');
+        $result = run('docker run --rm --name phala-sgx_detect phalanetwork/phala-sgx_detect');
     }
 
     writeln($result);
@@ -302,78 +377,97 @@ task('deploy', function () {
     $target = Context::get()->getHost();
     $targetIdx = getHostIdx($target);
 
-    // setup node name
-    if (!$target->get('node_name', false)) {
-        $target->set('node_name', $target->getHostname());
-    }
-
+    // display info
     $hostname = $target->getHostname();
-    $useAsNode = $target->get('use_as_node');
-    $useAsNodeText = $useAsNode
-        ? 'with node'
-        : 'without node';
+    writeln("<info>Deploying to ${hostname}</info>");
 
-    writeln("<info>Deploying to ${hostname} (${useAsNodeText})</info>");
-
+    // prepare scripts list based on config
     $scripts = [
         'rc-script.sh' => 'rc-script.sh',
-        'main.sh' => $useAsNode ? 'main-with-node.sh' : 'main-without-node.sh',
+        'main.sh' => 'main.sh',
     ];
 
-    $publicDeviceStats = get('public_device_stats', false);
+    $publicDeviceStats = get('public_device_stats');
     if ($publicDeviceStats) {
         $scripts['device-state-updater.php'] = 'device-state-updater.php';
     };
 
-    // setup ports
-    $nodePorts = $target->get('node_ports', []);
-    foreach ($nodePorts as $idx => $nodePort) {
-        set("ports_$idx", $nodePort);
+    // get configuration
+    $nodeConfig = $target->get('node_config');
+    $minerConfig = $target->get('miner_config');
+
+    // decrypt mnemnoic
+    if (empty($minerConfig['mnemonic']) && !empty($minerConfig['encrypted_mnemonic'])) {
+        $encryptionMethod = $target->get('encryption_method');
+        $encryptionKey = $target->get('encryption_key');
+
+        $ivLength = openssl_cipher_iv_length('aes-256-cbc-hmac-sha256');
+        $iv = substr($hostname, 0, $ivLength);
+        $iv = str_pad($iv, $ivLength);
+
+        $minerConfig['mnemonic'] = decrypt_mnemonic(
+            $encryptionMethod,
+            $minerConfig['encrypted_mnemonic'],
+            $encryptionKey,
+            $iv
+        );
     }
 
-    // collect all nodes ips
-    if ($target->get('force_node_ip', false)) {
-        $nodes[] = $target->get('force_node_ip');
+    // set placeholders
+    $placeholders = [
+        'node_config.name' => null,
+        'node_config.ips' => null,
+        'node_config.ports' => null,
+        'node_config.extra_opts' => null,
+        'miner_config.controller_address' => null,
+        'node_config' => $nodeConfig,
+        'miner_config' => $minerConfig,
+
+    ];
+
+    // get nodes
+    if (!empty($minerConfig['force_node_ip'])) {
+        $nodes[] = $minerConfig['force_node_ip'];
     }
     else {
         $nodesByNetwork = get('nodesByNetwork');
         $network = $target->get('network');
-
         $nodes = $nodesByNetwork[$network];
     }
 
-    // rotate nodes
     for ($i=0; $i<$targetIdx; ++$i) {
         array_push($nodes, array_shift($nodes));
     }
 
-    // flattern
     $flatNodes = array_merge(...$nodes);
-
-    $nodeIpsRaw = '"' . join('" "', $flatNodes) . '"';
-    set('nodes', $nodeIpsRaw);
+    $placeholders['nodes'] = '"' . join('" "', $flatNodes) . '"';
 
     // get device
-    $dockerDevices = '';
+    $placeholders['pruntime_devices'] = '';
 
     $isDcapDriver = test('[[ -e /dev/sgx ]]');
     if ($isDcapDriver) {
-        $dockerDevices = '--device /dev/sgx/enclave --device /dev/sgx/provision';
+        $placeholders['pruntime_devices'] = '--device /dev/sgx/enclave --device /dev/sgx/provision';
     }
 
     $isSgxDriver = test('[[ -e /dev/isgx ]]');
     if ($isSgxDriver) {
-        $dockerDevices = '--device /dev/isgx';
+        $placeholders['pruntime_devices'] = '--device /dev/isgx';
     }
 
-    set('pruntime_devices', $dockerDevices);
+    // assign placeholders
+    $placeholders = array_flattern_with_path($placeholders);
 
-    // step 0 - install dependencies
+    foreach ($placeholders as $placeholder => $value) {
+        $target->set($placeholder, $value);
+    }
+
+    // step 1 - install dependencies
     if ($publicDeviceStats) {
         run("which php || sudo apt install -y php");
     }
 
-    // step 1 - clear directories
+    // step 2 - clear directories
     writeln('<comment>Clearing build directory (local)</comment>');
 
     if (testLocally('[[ ! -e ./build ]]')) {
@@ -385,7 +479,7 @@ task('deploy', function () {
     }
     runLocally("mkdir -p ./build/$hostname");
 
-    // step 2 - generate scripts
+    // step 3 - generate scripts
     writeln('<comment>Genereting scripts (local)</comment>');
 
     foreach ($scripts as $scriptDest => $scriptSrc) {
@@ -400,12 +494,12 @@ task('deploy', function () {
         file_put_contents($scriptPath, $scriptContent);
     }
 
-    // step 3 - uploading scripts
+    // step 4 - uploading scripts
     writeln('<comment>Uploading scripts</comment>');
 
     $deployDirExists = test('[[ -e {{deploy_path}} ]]');
     if (!$deployDirExists) {
-        run('sudo mkdir -p {{deploy_path}}');
+        run('mkdir -p {{deploy_path}}');
     }
 
     foreach ($scripts as $scriptDest => $scriptSrc) {
@@ -415,16 +509,16 @@ task('deploy', function () {
         $remotePath = '{{deploy_path}}/' . $scriptDest;
 
         upload($localPath, $remotePath);
-        run("sudo chown root:root $remotePath");
-        run("sudo chmod +x $remotePath");
+
+        run("chmod +x $remotePath");
     }
 
-    // step 4 - enable service
+    // step 5 - enable service
     writeln('<comment>Configuring service</comment>');
 
     run("
         cd {{deploy_path}}
-        ./rc-script.sh install
+        sudo ./rc-script.sh install
     ");
 });
 
@@ -462,7 +556,7 @@ task('stack:restart', function () {
 desc('Upgrade docker containers');
 task('stack:upgrade', function () {
     $target = Context::get()->getHost();
-    $withNode = $target->get('use_as_node');
+    $withNode = $target->get('run_node');
 
     if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
         run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
@@ -581,7 +675,7 @@ task('purge', function () {
     run('docker stop phala-node || true');
     run('docker rmi -f $(docker images -a -q)');
     run('rm -rf {{deploy_path}}');
-    run('update-rc.d {{service_name}} remove');
-    run('rm /etc/init.d/{{service_name}} || true');
-    run('rm /etc/rc*.d/*{{service_name}} || true');
+    run('sudo update-rc.d {{service_name}} remove');
+    run('sudo rm /etc/init.d/{{service_name}} || true');
+    run('sudo rm /etc/rc*.d/*{{service_name}} || true');
 });
