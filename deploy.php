@@ -17,7 +17,6 @@ set('allow_anonymous_stats', false);
 // project configuration
 set('service_name', 'phala-stack');
 set('network', 'main');
-set('encryption_method', 'aes-256-cbc-hmac-sha256');
 set('miner_mnemonic', 'unknown');
 set('controller_address', 'unknown');
 set('run_node', 0);
@@ -159,7 +158,7 @@ task('mnemonic_encrypt', function () {
     $config = yaml_parse_file('nodes.yml');
 
     $target = Context::get()->getHost();
-    $encryptionMethod = $target->get('encryption_method');
+    $encryptionAlgorithm = 'aes-256-cbc-hmac-sha256';
     $encryptionKey = $target->get('encryption_key');
 
     foreach ($config as $hostname => &$hostConfig) {
@@ -169,7 +168,7 @@ task('mnemonic_encrypt', function () {
 
         $hostConfig['miner_config']['encrypted_mnemonic'] = openssl_encrypt(
             $hostConfig['miner_config']['mnemonic'],
-            $encryptionMethod,
+            $encryptionAlgorithm,
             $encryptionKey,
             0,
             $iv
@@ -199,7 +198,12 @@ task('setup', function () {
 
 desc('Reinstall docker');
 task('docker:reinstall', function () {
-    run('sudo apt update && sudo apt upgrade -y && sudo apt autoremove -y;', [ 'tty' => true ]);
+    run('
+        sudo apt update;
+        sudo apt upgrade -y;
+        sudo apt autoremove -y;
+        sudo apt -y install curl
+    ', [ 'tty' => true ]);
 
     try {
         run('sudo apt-get remove docker docker-engine docker.io containerd runc;', [ 'tty' => true ]);
@@ -207,10 +211,14 @@ task('docker:reinstall', function () {
     catch (\Exception $e) {}
 
     run('
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -;
-        sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable";
-        sudo apt-get install -y docker-ce docker-ce-cli containerd.io;
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg;
+        echo \
+            "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+            $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null;
+        sudo apt update;
     ', [ 'tty' => true ]);
+
+    run('sudo apt install -y docker-ce docker-ce-cli containerd.io', [ 'tty' => true ]);
 });
 
 desc('Enable SGX (if software controlled)');
@@ -398,7 +406,7 @@ task('deploy', function () {
 
     // decrypt mnemnoic
     if (empty($minerConfig['mnemonic']) && !empty($minerConfig['encrypted_mnemonic'])) {
-        $encryptionMethod = $target->get('encryption_method');
+        $encryptionAlgorithm = 'aes-256-cbc-hmac-sha256';
         $encryptionKey = $target->get('encryption_key');
 
         $ivLength = openssl_cipher_iv_length('aes-256-cbc-hmac-sha256');
@@ -406,7 +414,7 @@ task('deploy', function () {
         $iv = str_pad($iv, $ivLength);
 
         $minerConfig['mnemonic'] = decrypt_mnemonic(
-            $encryptionMethod,
+            $encryptionAlgorithm,
             $minerConfig['encrypted_mnemonic'],
             $encryptionKey,
             $iv
