@@ -4,7 +4,6 @@ namespace Deployer;
 
 use Deployer\Host\Host;
 use Deployer\Task\Context;
-use function Deployer\Support\array_flatten;
 
 require 'recipe/common.php';
 
@@ -69,7 +68,7 @@ function array_flattern_with_path(array $source, $pathPrefix = ''): array
 
         if (is_array($value)) {
             $children = array_flattern_with_path($value, $path);
-            $out += $children;
+            $out = array_merge($out, $children);
         }
         else {
             $out[$path] = $value;
@@ -189,6 +188,8 @@ task('setup', function () {
     $target = Context::get()->getHost();
     $hostname = $target->getHostname();
 
+    writeln("Setup for <info>${hostname}</info>");
+
     runLocally("{{bin/dep}} docker:reinstall $hostname", [ 'tty' => true ]);
     runLocally("{{bin/dep}} driver:install $hostname", [ 'tty' => true ]);
     runLocally("{{bin/dep}} check_compatibility $hostname", [ 'tty' => true ]);
@@ -198,6 +199,10 @@ task('setup', function () {
 
 desc('Reinstall docker');
 task('docker:reinstall', function () {
+    $target = Context::get()->getHost();
+    $hostname = $target->getHostname();
+    writeln("Reinstalling docker for <info>${hostname}</info>");
+
     run('
         sudo apt update;
         sudo apt upgrade -y;
@@ -223,6 +228,10 @@ task('docker:reinstall', function () {
 
 desc('Enable SGX (if software controlled)');
 task('sgx_enable', function () {
+    $target = Context::get()->getHost();
+    $hostname = $target->getHostname();
+    writeln("Enabling software managed SGX for <info>${hostname}</info>");
+
     run('
         wget https://github.com/Phala-Network/sgx-tools/releases/download/0.1/sgx_enable;
         chmod +x sgx_enable;
@@ -233,6 +242,10 @@ task('sgx_enable', function () {
 
 desc('Check SGX driver');
 task('driver:check', function () {
+    $target = Context::get()->getHost();
+    $hostname = $target->getHostname();
+    writeln("Checking driver for <info>${hostname}</info>");
+
     $isInstalled = test('[[ -e /dev/sgx ]]');
     if ($isInstalled) {
         writeln('<comment>DCAP driver is installed</comment>');
@@ -250,6 +263,10 @@ task('driver:check', function () {
 
 desc('Install SGX driver');
 task('driver:install', function () {
+    $target = Context::get()->getHost();
+    $hostname = $target->getHostname();
+    writeln("Installing driver for <info>${hostname}</info>");
+
     $isInstalled = test('[[ -e /dev/sgx ]]');
     if ($isInstalled) {
         writeln('<comment>DCAP driver is already installed</comment>');
@@ -320,6 +337,10 @@ task('driver:install', function () {
 
 desc('Check Phala miner compatibility');
 task('check_compatibility', function () {
+    $target = Context::get()->getHost();
+    $hostname = $target->getHostname();
+    writeln("Checking compatibility for <info>${hostname}</info>");
+
     $usingDcapDriver = test('[[ -e /dev/sgx ]]');
     $usingSgxDriver = test('[[ -e /dev/isgx ]]');
 
@@ -430,7 +451,6 @@ task('deploy', function () {
         'miner_config.controller_address' => null,
         'node_config' => $nodeConfig,
         'miner_config' => $minerConfig,
-
     ];
 
     // get nodes
@@ -539,8 +559,8 @@ desc('Reboot device');
 task('reboot', function () {
     $target = Context::get()->getHost();
     $hostname = $target->getHostname();
+    writeln("Rebooting <info>${hostname}</info>");
 
-    writeln("<info>Rebooting ${hostname}</info>");
     try {
         run('sudo reboot');
     }
@@ -549,6 +569,11 @@ task('reboot', function () {
 
 desc('Restart host');
 task('stack:restart', function () {
+    $target = Context::get()->getHost();
+    $hostname = $target->getHostname();
+    writeln("Restarting stack for <info>${hostname}</info>");
+
+
     if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
         run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
     }
@@ -564,6 +589,9 @@ task('stack:restart', function () {
 desc('Upgrade docker containers');
 task('stack:upgrade', function () {
     $target = Context::get()->getHost();
+    $hostname = $target->getHostname();
+    writeln("Upgrading stack for <info>${hostname}</info>");
+
     $withNode = $target->get('run_node');
 
     if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
@@ -585,76 +613,10 @@ task('stack:upgrade', function () {
     run("nohup {{deploy_path}}/main.sh start stack 1 > /dev/null 2>&1 &");
 });
 
-
-desc('Create stack database backup');
-task('db:backup', function () {
-    if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
-        run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
-    }
-
-    // stop dockers
-    run('docker stop phala-phost || true');
-    run('docker stop phala-pruntime || true');
-    run('docker stop phala-node || true');
-
-    // create backup
-    if (test('[[ -e {{deploy_path}}/phala-node-data ]]')) {
-        run("
-            cd {{deploy_path}}
-            [[ -e phala-node-data-bak ]] && rm -r phala-node-data-bak
-            cp -r phala-node-data phala-node-data-bak
-        ", [ 'timeout' => 0 ]);
-    }
-
-    if (test('[[ -e {{deploy_path}}/phala-pruntime-data ]]')) {
-        run("
-            cd {{deploy_path}}
-            [[ -e phala-pruntime-data-bak ]] && rm -r phala-pruntime-data-bak
-            cp -r phala-pruntime-data phala-pruntime-data-bak
-        ", [ 'timeout' => 0 ]);
-    }
-
-    run("nohup {{deploy_path}}/main.sh start stack 1 > /dev/null 2>&1 &");
-});
-
-
-desc('Restore stack datatbase from backup');
-task('db:restore', function () {
-    if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
-        run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
-    }
-
-    // stop dockers
-    run('docker stop phala-phost || true');
-    run('docker stop phala-pruntime || true');
-    run('docker stop phala-node || true');
-
-    // create backup
-    if (test('[[ -e {{deploy_path}}/phala-node-data-bak ]]')) {
-        run("
-            cd {{deploy_path}}
-            [[ -e phala-node-data ]] && rm -r phala-node-data
-            rsync -aHAX --progress phala-node-data-bak phala-node-data
-        ", [ 'timeout' => 0, 'tty' => true ]);
-    }
-
-    if (test('[[ -e {{deploy_path}}/phala-pruntime-data-bak ]]')) {
-        run("
-            cd {{deploy_path}}
-            [[ -e phala-pruntime-data ]] && rm -r phala-pruntime-data
-            rsync -aHAX --progress phala-pruntime-data-bak phala-pruntime-data
-        ", [ 'timeout' => 0, 'tty' => true ]);
-    }
-
-    run("nohup {{deploy_path}}/main.sh start stack 1 > /dev/null 2>&1 &");
-});
-
-
 task('stats:restart', function () {
     $target = Context::get()->getHost();
     $hostname = $target->getHostname();
-
-    writeln("<info>Stats start for ${hostname}</info>");
+    writeln("Restarting stats for <info>${hostname}</info>");
 
     if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stats' | grep -v 'grep'` != '' ]]")) {
         run("ps aux | grep '{{deploy_path}}/main.sh start stats' | grep -v 'grep' | awk '{print $2}' | xargs kill");
@@ -663,12 +625,10 @@ task('stats:restart', function () {
     run('nohup {{deploy_path}}/main.sh start stats > /dev/null 2>&1 &', [ 'timeout' => 1 ]);
 });
 
-
 task('purge', function () {
     $target = Context::get()->getHost();
     $hostname = $target->getHostname();
-
-    writeln("<info>Purge for ${hostname}</info>");
+    writeln("Purge stack for <info>${hostname}</info>");
 
     if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
         run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
