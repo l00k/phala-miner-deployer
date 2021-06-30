@@ -2,7 +2,6 @@
 
 namespace Deployer;
 
-use Deployer\Host\Host;
 use Deployer\Task\Context;
 
 require 'recipe/common.php';
@@ -34,10 +33,7 @@ inventory('nodes.yml');
 
 
 // utils
-set('bin/dep', function () {
-    return parse('{{bin/php}} ./vendor/bin/dep');
-});
-
+include __DIR__ .'/deploy-utils.inc.php';
 
 $deployExtPath = __DIR__ . '/deploy-ext.inc.php';
 if (file_exists($deployExtPath)) {
@@ -45,111 +41,6 @@ if (file_exists($deployExtPath)) {
 }
 
 
-function getHostIdx(Host $host)
-{
-    $hosts = Deployer::get()->hosts->toArray();
-
-    $idx = 0;
-    foreach ($hosts as $_host) {
-        if ($_host === $host) {
-            break;
-        }
-        ++$idx;
-    }
-
-    return $idx;
-}
-
-function array_flattern_with_path(array $source, $pathPrefix = ''): array
-{
-    $out = [];
-    foreach ($source as $name => $value) {
-        $path = ($pathPrefix ? $pathPrefix . '.' : '') . $name;
-
-        if (is_array($value)) {
-            $children = array_flattern_with_path($value, $path);
-            $out = array_merge($out, $children);
-        }
-        else {
-            $out[$path] = $value;
-        }
-    }
-    return $out;
-}
-
-function decrypt_mnemonic(string $method, string $encryptedMnemonic, string $key, string $iv): string
-{
-    return openssl_decrypt(
-        $encryptedMnemonic,
-        $method,
-        $key,
-        0,
-        $iv
-    );
-}
-
-
-set('nodesByNetwork', function() {
-    $nodesByNetwork = [];
-
-    writeln('Fetching node IPs');
-
-    $idx = 0;
-
-    $hosts = Deployer::get()->hosts->toArray();
-    foreach ($hosts as $host) {
-        $_hostname = $host->getHostname();
-        $runNode = (bool) $host->get('run_node');
-
-        if ($runNode) {
-            write('.');
-
-            $network = $host->get('network');
-            $nodeConfig = $host->getConfig()->get('node_config');
-            $nodePorts = $nodeConfig['ports'];
-
-            if (!isset($nodesByNetwork[$network])) {
-                $nodesByNetwork[$network] = [];
-            }
-
-            $nodeIps = [];
-            if (!empty($nodeConfig['ips'])) {
-                $nodeIps = $nodeConfig['ips'];
-            }
-            else {
-                try {
-                    $allNodeIpsTxt = runLocally("{{bin/dep}} get-local-network-ip -q $_hostname");
-                    $allNodeIps = explode(' ', $allNodeIpsTxt);
-
-                    // remove 172.* ips
-                    $nodeIps = array_filter(
-                        $allNodeIps,
-                        function($ip) {
-                            $part1 = explode('.', $ip)[0];
-                            return !in_array($part1, [ 172 ]);
-                        }
-                    );
-                }
-                catch(\Exception $e) {}
-            }
-
-            $nodesByNetwork[$network][$idx] = [];
-            foreach ($nodeIps as $nodeIp) {
-                $nodesByNetwork[$network][$idx][] = implode(':', [ $nodeIp, $nodePorts[0], $nodePorts[1] ]);
-            }
-
-            ++$idx;
-        }
-    }
-
-    writeln('');
-
-    return $nodesByNetwork;
-});
-
-set('bin/dep', function () {
-    return parse('{{bin/php}} ./vendor/bin/dep');
-});
 
 
 desc('Encrypt mnemonics');
@@ -183,6 +74,7 @@ task('mnemonic_encrypt', function () {
 })->local();
 
 
+
 desc('Setup stack');
 task('setup', function () {
     $target = Context::get()->getHost();
@@ -196,6 +88,8 @@ task('setup', function () {
     runLocally("{{bin/dep}} deploy $hostname", [ 'tty' => true ]);
     runLocally("{{bin/dep}} reboot $hostname", [ 'tty' => true ]);
 });
+
+
 
 desc('Reinstall docker');
 task('docker:reinstall', function () {
@@ -226,6 +120,8 @@ task('docker:reinstall', function () {
     run('sudo apt install -y docker-ce docker-ce-cli containerd.io', [ 'tty' => true ]);
 });
 
+
+
 desc('Enable SGX (if software controlled)');
 task('sgx_enable', function () {
     $target = Context::get()->getHost();
@@ -239,6 +135,8 @@ task('sgx_enable', function () {
         rm sgx_enable;
     ', [ 'tty' => true ]);
 });
+
+
 
 desc('Check SGX driver');
 task('driver:check', function () {
@@ -260,6 +158,8 @@ task('driver:check', function () {
 
     writeln('<error>Sadly - none of drivers seems to work.</error>');
 });
+
+
 
 desc('Install SGX driver');
 task('driver:install', function () {
@@ -335,6 +235,8 @@ task('driver:install', function () {
     writeln('<error>Sadly - none of drivers seems to work.</error>');
 });
 
+
+
 desc('Check Phala miner compatibility');
 task('check_compatibility', function () {
     $target = Context::get()->getHost();
@@ -400,6 +302,8 @@ task('check_compatibility', function () {
 
     writeln('');
 });
+
+
 
 desc('Deploy stack');
 task('deploy', function () {
@@ -550,10 +454,14 @@ task('deploy', function () {
     ");
 });
 
+
+
 desc('Get local network IP');
 task('get-local-network-ip', function () {
     echo run("hostname -I | awk '{print $1}'");
 });
+
+
 
 desc('Reboot device');
 task('reboot', function () {
@@ -566,6 +474,8 @@ task('reboot', function () {
     }
     catch(\Exception $e) {}
 });
+
+
 
 desc('Restart host');
 task('stack:restart', function () {
@@ -585,6 +495,8 @@ task('stack:restart', function () {
 
     run("nohup {{deploy_path}}/main.sh start stack 1 > /dev/null 2>&1 &");
 });
+
+
 
 desc('Upgrade docker containers');
 task('stack:upgrade', function () {
@@ -613,6 +525,9 @@ task('stack:upgrade', function () {
     run("nohup {{deploy_path}}/main.sh start stack 1 > /dev/null 2>&1 &");
 });
 
+
+
+desc('Restart stats');
 task('stats:restart', function () {
     $target = Context::get()->getHost();
     $hostname = $target->getHostname();
@@ -624,6 +539,74 @@ task('stats:restart', function () {
 
     run('nohup {{deploy_path}}/main.sh start stats > /dev/null 2>&1 &', [ 'timeout' => 1 ]);
 });
+
+
+
+desc('Create stack database backup');
+task('db:backup', function () {
+    if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
+        run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
+    }
+
+    // stop dockers
+    run('docker stop phala-phost || true');
+    run('docker stop phala-pruntime || true');
+    run('docker stop phala-node || true');
+
+    // create backup
+    if (test('[[ -e {{deploy_path}}/phala-node-data ]]')) {
+        run("
+            cd {{deploy_path}}
+            [[ -e phala-node-data-bak ]] && rm -r phala-node-data-bak
+            cp -r phala-node-data phala-node-data-bak
+        ", [ 'timeout' => 0 ]);
+    }
+
+    if (test('[[ -e {{deploy_path}}/phala-pruntime-data ]]')) {
+        run("
+            cd {{deploy_path}}
+            [[ -e phala-pruntime-data-bak ]] && rm -r phala-pruntime-data-bak
+            cp -r phala-pruntime-data phala-pruntime-data-bak
+        ", [ 'timeout' => 0 ]);
+    }
+
+    run("nohup {{deploy_path}}/main.sh start stack 1 > /dev/null 2>&1 &");
+});
+
+
+
+desc('Restore stack datatbase from backup');
+task('db:restore', function () {
+    if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
+        run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
+    }
+
+    // stop dockers
+    run('docker stop phala-phost || true');
+    run('docker stop phala-pruntime || true');
+    run('docker stop phala-node || true');
+
+    // create backup
+    if (test('[[ -e {{deploy_path}}/phala-node-data-bak ]]')) {
+        run("
+            cd {{deploy_path}}
+            [[ -e phala-node-data ]] && rm -r phala-node-data
+            rsync -aHAX --progress phala-node-data-bak phala-node-data
+        ", [ 'timeout' => 0, 'tty' => true ]);
+    }
+
+    if (test('[[ -e {{deploy_path}}/phala-pruntime-data-bak ]]')) {
+        run("
+            cd {{deploy_path}}
+            [[ -e phala-pruntime-data ]] && rm -r phala-pruntime-data
+            rsync -aHAX --progress phala-pruntime-data-bak phala-pruntime-data
+        ", [ 'timeout' => 0, 'tty' => true ]);
+    }
+
+    run("nohup {{deploy_path}}/main.sh start stack 1 > /dev/null 2>&1 &");
+});
+
+
 
 task('purge', function () {
     $target = Context::get()->getHost();
