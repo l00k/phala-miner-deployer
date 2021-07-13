@@ -477,6 +477,20 @@ task('reboot', function () {
 
 
 
+desc('Shutdown device');
+task('shutdown', function () {
+    $target = Context::get()->getHost();
+    $hostname = $target->getHostname();
+    writeln("Shutting down <info>${hostname}</info>");
+
+    try {
+        run('sudo shutdown now');
+    }
+    catch(\Exception $e) {}
+});
+
+
+
 desc('Restart host');
 task('stack:restart', function () {
     $target = Context::get()->getHost();
@@ -514,6 +528,12 @@ task('stack:upgrade', function () {
     run('docker stop phala-phost || true');
     run('docker stop phala-pruntime || true');
     run('docker stop phala-node || true');
+
+    // remove data
+    if ($withNode) {
+        run('cd {{deploy_path}} && rm -r phala-node-data || true');
+    }
+    run('cd {{deploy_path}} && rm -r phala-pruntime-data || true');
 
     // pull again
     if ($withNode) {

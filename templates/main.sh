@@ -50,7 +50,7 @@ start_host() {
     fi
 
     if [[ {{run_node}} == 1 ]]; then
-        NODES=("phala-node:{{node_config.ports.0}}:{{node_config.ports.1}}", {{nodes}})
+        NODES=("phala-node:{{node_config.ports.0}}:{{node_config.ports.1}}" {{nodes}})
     else
         NODES=({{nodes}})
     fi
