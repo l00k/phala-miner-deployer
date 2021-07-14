@@ -166,7 +166,6 @@ task('driver:check', function () {
 });
 
 
-
 desc('Install SGX driver');
 task('driver:install', function () {
     $target = Context::get()->getHost();
@@ -176,13 +175,27 @@ task('driver:install', function () {
     $isInstalled = test('[[ -e /dev/sgx ]]');
     if ($isInstalled) {
         writeln('<comment>DCAP driver is already installed</comment>');
-        return;
+
+        $confirm = askConfirmation('Do you want to reinstall?');
+        if ($confirm) {
+            run('sudo /opt/intel/sgxdriver/uninstall.sh', [ 'tty' => true ]);
+        }
+        else {
+            return;
+        }
     }
 
     $isInstalled = test('[[ -e /dev/isgx ]]');
     if ($isInstalled) {
         writeln('<comment>SGX driver is already installed</comment>');
-        return;
+
+        $confirm = askConfirmation('Do you want to reinstall?');
+        if ($confirm) {
+            run('sudo /opt/intel/sgxdriver/uninstall.sh', [ 'tty' => true ]);
+        }
+        else {
+            return;
+        }
     }
 
     // prepare to install
@@ -196,7 +209,7 @@ task('driver:install', function () {
     writeln('Installing DCAP driver');
 
     run('
-        wget https://download.01.org/intel-sgx/sgx-dcap/1.10.3/linux/distro/ubuntu20.04-server/sgx_linux_x64_driver_1.41.bin;
+        wget https://download.01.org/intel-sgx/sgx-dcap/1.11/linux/distro/ubuntu20.04-server/sgx_linux_x64_driver_1.41.bin;
         chmod +x sgx_linux_x64_driver_1.41.bin;
         sudo ./sgx_linux_x64_driver_1.41.bin;
         rm sgx_linux_x64_driver_1.41.bin;
@@ -252,7 +265,7 @@ task('check_compatibility', function () {
     $usingDcapDriver = test('[[ -e /dev/sgx ]]');
     $usingSgxDriver = test('[[ -e /dev/isgx ]]');
 
-    run('docker pull phalanetwork/phala-sgx_detect', [ 'tty' => true ]);
+    run('docker pull phalanetwork/phala-sgx_detect:latest', [ 'tty' => true ]);
 
     if ($usingDcapDriver) {
         writeln('<comment>Checking Phala stack compatablity with DCAP driver</comment>');
@@ -497,7 +510,23 @@ task('shutdown', function () {
 
 
 
-desc('Restart host');
+desc('Stop stack');
+task('stack:stop', function () {
+    $target = Context::get()->getHost();
+    $hostname = $target->getHostname();
+    writeln("Stopping stack for <info>${hostname}</info>");
+
+    if (test("[[ `ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep'` != '' ]]")) {
+        run("ps aux | grep '{{deploy_path}}/main.sh start stack' | grep -v 'grep' | awk '{print $2}' | xargs kill");
+    }
+
+    run('docker stop phala-phost || true');
+    run('docker stop phala-pruntime || true');
+});
+
+
+
+desc('Restart stack');
 task('stack:restart', function () {
     $target = Context::get()->getHost();
     $hostname = $target->getHostname();
