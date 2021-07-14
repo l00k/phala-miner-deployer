@@ -52,17 +52,23 @@ task('mnemonic_encrypt', function () {
     $encryptionKey = $target->get('encryption_key');
 
     foreach ($config as $hostname => &$hostConfig) {
-        $ivLength = openssl_cipher_iv_length('aes-256-cbc-hmac-sha256');
-        $iv = substr($hostname, 0, $ivLength);
-        $iv = str_pad($iv, $ivLength);
 
-        $hostConfig['miner_config']['encrypted_mnemonic'] = openssl_encrypt(
-            $hostConfig['miner_config']['mnemonic'],
-            $encryptionAlgorithm,
-            $encryptionKey,
-            0,
-            $iv
-        );
+        if (
+            !empty($hostConfig['miner_config']['mnemonic'])
+            && empty($hostConfig['miner_config']['encrypted_mnemonic'])
+        ) {
+            $ivLength = openssl_cipher_iv_length('aes-256-cbc-hmac-sha256');
+            $iv = substr($hostname, 0, $ivLength);
+            $iv = str_pad($iv, $ivLength);
+
+            $hostConfig['miner_config']['encrypted_mnemonic'] = openssl_encrypt(
+                $hostConfig['miner_config']['mnemonic'],
+                $encryptionAlgorithm,
+                $encryptionKey,
+                0,
+                $iv
+            );
+        }
 
         $hostConfig['miner_config'] = [
             'encrypted_mnemonic' => $hostConfig['miner_config']['encrypted_mnemonic'],
