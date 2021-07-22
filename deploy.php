@@ -92,6 +92,7 @@ task('setup', function () {
     runLocally("{{bin/dep}} driver:install $hostname", [ 'tty' => true ]);
     runLocally("{{bin/dep}} check_compatibility $hostname", [ 'tty' => true ]);
     runLocally("{{bin/dep}} deploy $hostname", [ 'tty' => true ]);
+    runLocally("{{bin/dep}} stack:upgrade $hostname", [ 'tty' => true ]);
     runLocally("{{bin/dep}} reboot $hostname", [ 'tty' => true ]);
 });
 
