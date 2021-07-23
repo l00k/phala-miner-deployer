@@ -80,6 +80,40 @@ task('mnemonic_encrypt', function () {
 })->local();
 
 
+desc('Decrypt (preview) mnemonics');
+task('mnemonic_decrypt', function () {
+    $config = yaml_parse_file('nodes.yml');
+
+    $target = Context::get()->getHost();
+
+    foreach ($config as $hostname => &$hostConfig) {
+        if (!empty($hostConfig['miner_config']['mnemonic'])) {
+            $mneomonic = $hostConfig['miner_config']['mnemonic'];
+        }
+
+        if (!empty($hostConfig['miner_config']['encrypted_mnemonic'])) {
+            $encryptionAlgorithm = 'aes-256-cbc-hmac-sha256';
+            $encryptionKey = $target->get('encryption_key');
+
+            $ivLength = openssl_cipher_iv_length('aes-256-cbc-hmac-sha256');
+            $iv = substr($hostname, 0, $ivLength);
+            $iv = str_pad($iv, $ivLength);
+
+            $mneomonic = decrypt_mnemonic(
+                $encryptionAlgorithm,
+                $hostConfig['miner_config']['encrypted_mnemonic'],
+                $encryptionKey,
+                $iv
+            );
+        }
+
+        echo $hostname . "\t" . $mneomonic . PHP_EOL;
+    }
+
+    echo PHP_EOL;
+})->local();
+
+
 
 desc('Setup stack');
 task('setup', function () {
